@@ -1,0 +1,25 @@
+Scripts:StabilizedSpectraSimple:tree:ScanRepeat:1:0.0
+Scripts:StabilizedSpectraSimple:tree:RedCavStart:1:0.0
+Scripts:StabilizedSpectraSimple:tree:AOMstart:1:0.0
+Scripts:StabilizedSpectraSimple:tree:ScanPoints:1:0.0
+Scripts:StabilizedSpectraSimple:tree:AOMend:1:0.0
+Scripts:BB1:tree:ScanRepeat:1:0.0
+Scripts:BB1:tree:ScanPoints:1:0.0
+Scripts:BB1:tree:EndT:1:0.0
+Scripts:BB1:tree:StartT:1:0.0
+ReadSetValues:i:Read:<empty>
+ReadSetValues:o:Set:<empty>
+TimeDepScan:tree:Y2 Scaling:1:1.0
+TimeDepScan:tree:Hysteresis top point:1:0.0
+TimeDepScan:tree:Measure interval:1:1.0
+TimeDepScan:tree:Hysteresis bottom point wait:1:0.0
+TimeDepScan:tree:Hysteresis top point wait:1:0.0
+TimeDepScan:tree:Y1 Scaling:1:1.0
+TimeDepScan:tree:Measure time:1:1e+19
+TimeDepScan:tree:Pause:1:1.0
+TimeDepScan:tree:Finish at:1:0.0
+TimeDepScan:tree:Hysteresis bottom point:1:0.0
+TimeDepScan:tree:Measure point:1:0.0
+TimeDepScan:i:Y1 Read:<empty>
+TimeDepScan:i:Y2 Read:<empty>
+TimeDepScan:o:X Set:<empty>
