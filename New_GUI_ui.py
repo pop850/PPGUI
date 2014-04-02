@@ -1,5 +1,5 @@
 # PyQt4 can be downloaded from:
-#	http://www.riverbankcomputing.com/software/pyqt/download
+#   http://www.riverbankcomputing.com/software/pyqt/download
 # PyQt4 requires Qt be installed.
 # PyQt4 also requires that SIP be installed
 #   http://www.riverbankcomputing.com/software/sip/download
@@ -385,6 +385,30 @@ class Ui_Form(object):
         self.histogram_graph = pg.ViewBox(parent=self.counts_graph)
         self.histogram_graph.setGeometry(58, 18, 392, 380)
         self.histogram_graph.setEnabled(False)
+
+        # DAQ graph
+        self.DAQ_PWin = pg.plot(title = "Fraction of Dark vs. Frequency", pen = 'r')
+        self.DAQ_PWin.setLabel('left', "Fraction of Dark", units='%')
+        self.DAQ_PWin.setLabel('bottom', "Frequency", units='s^-1')
+        self.DAQ_PWin.showGrid(x=False, y=True)
+
+        lr = pg.LinearRegionItem([400,700])
+        lr.setZValue(-10)
+        self.DAQ_PWin.addItem(lr)
+
+        zoomed = pg.plot(title="Zoom on selected region")
+        zoomed.setLabel('left', "Fraction of Dark", units='%')
+        zoomed.setLabel('bottom', "Frequency", units='s^-1')
+        zoomed.showGrid(x=False, y=True)
+        #zoomed.plot()
+        def updatePlot():
+            zoomed.setXRange(*lr.getRegion(), padding=0)
+        def updateRegion():
+            lr.setRegion(zoomed.getViewBox().viewRange()[0])
+        lr.sigRegionChanged.connect(updatePlot)
+        zoomed.sigXRangeChanged.connect(updateRegion)
+        updatePlot()
+        
         
         # Create parameter table
         self.parameterTable = QtGui.QTableWidget(Form)
@@ -395,123 +419,123 @@ class Ui_Form(object):
         self.parameterTable.setHorizontalHeaderLabels(self.tableHeader)
         self.parameterTable.verticalHeader().setVisible(False)
         
-	self.parameterTable.setColumnWidth(0,115)
-	self.parameterTable.setColumnWidth(1,100)
-	for i in range(0,34):
-	    self.parameterTable.setRowHeight(i, 21)
-	
+        self.parameterTable.setColumnWidth(0,115)
+        self.parameterTable.setColumnWidth(1,100)
+        for i in range(0,34):
+            self.parameterTable.setRowHeight(i, 21)
+    
         self.parameterTable.setItem(0,0,QtGui.QTableWidgetItem("A_BlueDetect"))
-	self.A_BlueDetectValue = 0
-	self.parameterTable.setItem(0,1,QtGui.QTableWidgetItem(str(self.A_BlueDetectValue)))
+        self.A_BlueDetectValue = 0
+        self.parameterTable.setItem(0,1,QtGui.QTableWidgetItem(str(self.A_BlueDetectValue)))
         self.parameterTable.setItem(1,0,QtGui.QTableWidgetItem("F_BlueDetect"))
-	self.F_BlueDetectValue = 0
-	self.parameterTable.setItem(1,1,QtGui.QTableWidgetItem(str(self.F_BlueDetectValue)))
+        self.F_BlueDetectValue = 0
+        self.parameterTable.setItem(1,1,QtGui.QTableWidgetItem(str(self.F_BlueDetectValue)))
         self.parameterTable.setItem(2,0,QtGui.QTableWidgetItem("A_BlueCool"))
-	self.A_BlueCoolValue = 0
-	self.parameterTable.setItem(2,1,QtGui.QTableWidgetItem(str(self.A_BlueCoolValue)))
+        self.A_BlueCoolValue = 0
+        self.parameterTable.setItem(2,1,QtGui.QTableWidgetItem(str(self.A_BlueCoolValue)))
         self.parameterTable.setItem(3,0,QtGui.QTableWidgetItem("F_BlueCool"))
-	self.F_BlueCoolValue = 0
-	self.parameterTable.setItem(3,1,QtGui.QTableWidgetItem(str(self.F_BlueCoolValue)))
+        self.F_BlueCoolValue = 0
+        self.parameterTable.setItem(3,1,QtGui.QTableWidgetItem(str(self.F_BlueCoolValue)))
         self.parameterTable.setItem(4,0,QtGui.QTableWidgetItem("F_IRon"))
-	self.F_IRonValue = 0
-	self.parameterTable.setItem(4,1,QtGui.QTableWidgetItem(str(self.F_IRonValue)))
+        self.F_IRonValue = 0
+        self.parameterTable.setItem(4,1,QtGui.QTableWidgetItem(str(self.F_IRonValue)))
         self.parameterTable.setItem(5,0,QtGui.QTableWidgetItem("F_IROFF"))
-	self.F_IROFFValue = 0
-	self.parameterTable.setItem(5,1,QtGui.QTableWidgetItem(str(self.F_IROFFValue)))
+        self.F_IROFFValue = 0
+        self.parameterTable.setItem(5,1,QtGui.QTableWidgetItem(str(self.F_IROFFValue)))
         self.parameterTable.setItem(6,0,QtGui.QTableWidgetItem("A_IRon"))
-	self.A_IRonValue = 0
-	self.parameterTable.setItem(6,1,QtGui.QTableWidgetItem(str(self.A_IRonValue)))
+        self.A_IRonValue = 0
+        self.parameterTable.setItem(6,1,QtGui.QTableWidgetItem(str(self.A_IRonValue)))
         self.parameterTable.setItem(7,0,QtGui.QTableWidgetItem("A_IROFF"))
-	self.A_IROFFValue = 0
-	self.parameterTable.setItem(7,1,QtGui.QTableWidgetItem(str(self.A_IROFFValue)))
+        self.A_IROFFValue = 0
+        self.parameterTable.setItem(7,1,QtGui.QTableWidgetItem(str(self.A_IROFFValue)))
         self.parameterTable.setItem(8,0,QtGui.QTableWidgetItem("F_RedOn"))
-	self.F_RedOnValue = 0
-	self.parameterTable.setItem(8,1,QtGui.QTableWidgetItem(str(self.F_RedOnValue)))
+        self.F_RedOnValue = 0
+        self.parameterTable.setItem(8,1,QtGui.QTableWidgetItem(str(self.F_RedOnValue)))
         self.parameterTable.setItem(9,0,QtGui.QTableWidgetItem("F_RedCenter"))
-	self.F_RedCenterValue = 0
-	self.parameterTable.setItem(9,1,QtGui.QTableWidgetItem(str(self.F_RedCenterValue)))
+        self.F_RedCenterValue = 0
+        self.parameterTable.setItem(9,1,QtGui.QTableWidgetItem(str(self.F_RedCenterValue)))
         self.parameterTable.setItem(10,0,QtGui.QTableWidgetItem("F_PolarOffset"))
-	self.F_PolarOffsetValue = 0
-	self.parameterTable.setItem(10,1,QtGui.QTableWidgetItem(str(self.F_PolarOffsetValue)))
+        self.F_PolarOffsetValue = 0
+        self.parameterTable.setItem(10,1,QtGui.QTableWidgetItem(str(self.F_PolarOffsetValue)))
         self.parameterTable.setItem(11,0,QtGui.QTableWidgetItem("F_Sec"))
-	self.F_SecValue = 0
-	self.parameterTable.setItem(11,1,QtGui.QTableWidgetItem(str(self.F_SecValue)))
+        self.F_SecValue = 0
+        self.parameterTable.setItem(11,1,QtGui.QTableWidgetItem(str(self.F_SecValue)))
         self.parameterTable.setItem(12,0,QtGui.QTableWidgetItem("F_Sec2"))
-	self.F_Sec2Value = 0
-	self.parameterTable.setItem(12,1,QtGui.QTableWidgetItem(str(self.F_Sec2Value)))
+        self.F_Sec2Value = 0
+        self.parameterTable.setItem(12,1,QtGui.QTableWidgetItem(str(self.F_Sec2Value)))
         self.parameterTable.setItem(13,0,QtGui.QTableWidgetItem("A_RedOn"))
-	self.A_RedOnValue = 0
-	self.parameterTable.setItem(13,1,QtGui.QTableWidgetItem(str(self.A_RedOnValue)))
+        self.A_RedOnValue = 0
+        self.parameterTable.setItem(13,1,QtGui.QTableWidgetItem(str(self.A_RedOnValue)))
         self.parameterTable.setItem(14,0,QtGui.QTableWidgetItem("A_SCool"))
-	self.A_SCoolValue = 0
-	self.parameterTable.setItem(14,1,QtGui.QTableWidgetItem(str(self.A_SCoolValue)))
+        self.A_SCoolValue = 0
+        self.parameterTable.setItem(14,1,QtGui.QTableWidgetItem(str(self.A_SCoolValue)))
         self.parameterTable.setItem(15,0,QtGui.QTableWidgetItem("A_Polar"))
-	self.A_PolarValue = 0
-	self.parameterTable.setItem(15,1,QtGui.QTableWidgetItem(str(self.A_PolarValue)))
+        self.A_PolarValue = 0
+        self.parameterTable.setItem(15,1,QtGui.QTableWidgetItem(str(self.A_PolarValue)))
         self.parameterTable.setItem(16,0,QtGui.QTableWidgetItem("us_MeasTime"))
-	self.us_MeasTimeValue = 0
-	self.parameterTable.setItem(16,1,QtGui.QTableWidgetItem(str(self.us_MeasTimeValue)))
+        self.us_MeasTimeValue = 0
+        self.parameterTable.setItem(16,1,QtGui.QTableWidgetItem(str(self.us_MeasTimeValue)))
         self.parameterTable.setItem(17,0,QtGui.QTableWidgetItem("us_RedTime"))
-	self.us_RedTimeValue = 0
-	self.parameterTable.setItem(17,1,QtGui.QTableWidgetItem(str(self.us_RedTimeValue)))
+        self.us_RedTimeValue = 0
+        self.parameterTable.setItem(17,1,QtGui.QTableWidgetItem(str(self.us_RedTimeValue)))
         self.parameterTable.setItem(18,0,QtGui.QTableWidgetItem("ms_ReadoutDly"))
-	self.ms_ReadoutDlyValue = 0
-	self.parameterTable.setItem(18,1,QtGui.QTableWidgetItem(str(self.ms_ReadoutDlyValue)))
+        self.ms_ReadoutDlyValue = 0
+        self.parameterTable.setItem(18,1,QtGui.QTableWidgetItem(str(self.ms_ReadoutDlyValue)))
         self.parameterTable.setItem(19,0,QtGui.QTableWidgetItem("SPloops"))
-	self.SPloopsValue = 0
-	self.parameterTable.setItem(19,1,QtGui.QTableWidgetItem(str(self.SPloopsValue)))
+        self.SPloopsValue = 0
+        self.parameterTable.setItem(19,1,QtGui.QTableWidgetItem(str(self.SPloopsValue)))
         self.parameterTable.setItem(20,0,QtGui.QTableWidgetItem("SCloops"))
-	self.SCloopsValue = 0
-	self.parameterTable.setItem(20,1,QtGui.QTableWidgetItem(str(self.SCloopsValue)))
+        self.SCloopsValue = 0
+        self.parameterTable.setItem(20,1,QtGui.QTableWidgetItem(str(self.SCloopsValue)))
         self.parameterTable.setItem(21,0,QtGui.QTableWidgetItem("SCloops2"))
-	self.SCloops2Value = 0
-	self.parameterTable.setItem(21,1,QtGui.QTableWidgetItem(str(self.SCloops2Value)))
+        self.SCloops2Value = 0
+        self.parameterTable.setItem(21,1,QtGui.QTableWidgetItem(str(self.SCloops2Value)))
         self.parameterTable.setItem(22,0,QtGui.QTableWidgetItem("us_RamseyDly"))
-	self.us_RamseyDlyValue = 0
-	self.parameterTable.setItem(22,1,QtGui.QTableWidgetItem(str(self.us_RamseyDlyValue)))
+        self.us_RamseyDlyValue = 0
+        self.parameterTable.setItem(22,1,QtGui.QTableWidgetItem(str(self.us_RamseyDlyValue)))
         self.parameterTable.setItem(23,0,QtGui.QTableWidgetItem("Ph_Ramsey"))
-	self.Ph_RamseyValue = 0
-	self.parameterTable.setItem(23,1,QtGui.QTableWidgetItem(str(self.Ph_RamseyValue)))
+        self.Ph_RamseyValue = 0
+        self.parameterTable.setItem(23,1,QtGui.QTableWidgetItem(str(self.Ph_RamseyValue)))
         self.parameterTable.setItem(24,0,QtGui.QTableWidgetItem("us_PiTime"))
-	self.us_PiTimeValue = 0
-	self.parameterTable.setItem(24,1,QtGui.QTableWidgetItem(str(self.us_PiTimeValue)))
+        self.us_PiTimeValue = 0
+        self.parameterTable.setItem(24,1,QtGui.QTableWidgetItem(str(self.us_PiTimeValue)))
         self.parameterTable.setItem(25,0,QtGui.QTableWidgetItem("Stupid"))
-	self.StupidValue = 0
-	self.parameterTable.setItem(25,1,QtGui.QTableWidgetItem(str(self.StupidValue)))
+        self.StupidValue = 0
+        self.parameterTable.setItem(25,1,QtGui.QTableWidgetItem(str(self.StupidValue)))
         self.parameterTable.setItem(26,0,QtGui.QTableWidgetItem("SCdiv"))
-	self.SCdivValue = 0
-	self.parameterTable.setItem(26,1,QtGui.QTableWidgetItem(str(self.SCdivValue)))
+        self.SCdivValue = 0
+        self.parameterTable.setItem(26,1,QtGui.QTableWidgetItem(str(self.SCdivValue)))
         self.parameterTable.setItem(27,0,QtGui.QTableWidgetItem("F_BlueHi"))
-	self.F_BlueHiValue = 0
-	self.parameterTable.setItem(27,1,QtGui.QTableWidgetItem(str(self.F_BlueHiValue)))
+        self.F_BlueHiValue = 0
+        self.parameterTable.setItem(27,1,QtGui.QTableWidgetItem(str(self.F_BlueHiValue)))
         self.parameterTable.setItem(28,0,QtGui.QTableWidgetItem("F_BlueOn"))
-	self.F_BlueOnValue = 0
-	self.parameterTable.setItem(28,1,QtGui.QTableWidgetItem(str(self.F_BlueOnValue)))
+        self.F_BlueOnValue = 0
+        self.parameterTable.setItem(28,1,QtGui.QTableWidgetItem(str(self.F_BlueOnValue)))
         self.parameterTable.setItem(29,0,QtGui.QTableWidgetItem("A_BlueOn"))
-	self.A_BlueOnValue = 0
-	self.parameterTable.setItem(29,1,QtGui.QTableWidgetItem(str(self.A_BlueOnValue)))
+        self.A_BlueOnValue = 0
+        self.parameterTable.setItem(29,1,QtGui.QTableWidgetItem(str(self.A_BlueOnValue)))
         self.parameterTable.setItem(30,0,QtGui.QTableWidgetItem("A_BlueHi"))
-	self.A_BlueHiValue = 0
-	self.parameterTable.setItem(30,1,QtGui.QTableWidgetItem(str(self.A_BlueHiValue)))
+        self.A_BlueHiValue = 0
+        self.parameterTable.setItem(30,1,QtGui.QTableWidgetItem(str(self.A_BlueHiValue)))
         self.parameterTable.setItem(31,0,QtGui.QTableWidgetItem("Grahame"))
-	self.GrahameValue = 0
-	self.parameterTable.setItem(31,1,QtGui.QTableWidgetItem(str(self.GrahameValue)))
+        self.GrahameValue = 0
+        self.parameterTable.setItem(31,1,QtGui.QTableWidgetItem(str(self.GrahameValue)))
         self.parameterTable.setItem(32,0,QtGui.QTableWidgetItem("Gurds"))
-	self.GurdsValue = 0
-	self.parameterTable.setItem(32,1,QtGui.QTableWidgetItem(str(self.GurdsValue)))
+        self.GurdsValue = 0
+        self.parameterTable.setItem(32,1,QtGui.QTableWidgetItem(str(self.GurdsValue)))
         self.parameterTable.setItem(33,0,QtGui.QTableWidgetItem("SPcounter2"))
-	self.SPcounter2Value = 0
-	self.parameterTable.setItem(33,1,QtGui.QTableWidgetItem(str(self.SPcounter2Value)))
-	
+        self.SPcounter2Value = 0
+        self.parameterTable.setItem(33,1,QtGui.QTableWidgetItem(str(self.SPcounter2Value)))
+        
 
         self.retranslateUi(Form)
-	# Connect event handlers to functions:
-	QtCore.QObject.connect(self.openButton, QtCore.SIGNAL("clicked()"), mainwindow.openFile)
-	QtCore.QObject.connect(self.saveAsButton, QtCore.SIGNAL("clicked()"), mainwindow.saveAs)
-	QtCore.QObject.connect(self.runButton, QtCore.SIGNAL("clicked()"), mainwindow.pp_run)
-	QtCore.QObject.connect(self.stopButton, QtCore.SIGNAL("clicked()"), mainwindow.stop)
-	QtCore.QObject.connect(self.readoutButton, QtCore.SIGNAL("clicked()"), mainwindow.readout)
-	QtCore.QObject.connect(self.resetPlotButton, QtCore.SIGNAL("clicked()"), mainwindow.resetPlot)
+        # Connect event handlers to functions:
+        QtCore.QObject.connect(self.openButton, QtCore.SIGNAL("clicked()"), mainwindow.openFile)
+        QtCore.QObject.connect(self.saveAsButton, QtCore.SIGNAL("clicked()"), mainwindow.saveAs)
+        QtCore.QObject.connect(self.runButton, QtCore.SIGNAL("clicked()"), mainwindow.pp_run)
+        QtCore.QObject.connect(self.stopButton, QtCore.SIGNAL("clicked()"), mainwindow.stop)
+        QtCore.QObject.connect(self.readoutButton, QtCore.SIGNAL("clicked()"), mainwindow.readout)
+        QtCore.QObject.connect(self.resetPlotButton, QtCore.SIGNAL("clicked()"), mainwindow.resetPlot)
         QtCore.QMetaObject.connectSlotsByName(mainwindow)
     
     
