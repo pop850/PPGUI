@@ -18,7 +18,6 @@ import ok
 import numpy
 from numpy import arange, sin, pi
 import threading, socket, time
-import etherplug
 
 from ppcomp import *
 from adBoard import *
@@ -32,6 +31,8 @@ CONFIG_FILE = "BlackPulseProgrammerConfig.ddscon"
 class MyForm(QtGui.QMainWindow):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
+        
+        self.projectSavePath = os.getcwd()
         
         # Configurable DDS properties:
         self._DDS_name = 'Black_DDS'  # Must match FPGA name
@@ -77,23 +78,33 @@ class MyForm(QtGui.QMainWindow):
         self.data = numpy.zeros([100,3], 'Int32')
         self.plotdata = numpy.zeros([100,3], 'Float32')
         self.ui.histogram_dataitem = None
-            
-        # Start network
-        self.plug = etherplug.etherplug(self.service_netcomm, NETPORT)
-        for i in range(len(self.boardChannelIndex)):
-            self.plug.register_hook('FREQ%i'%i, self.ui.stateobj['DDS%i_FREQ'%i].setValue)
-            self.plug.register_hook('AMP%i'%i, self.ui.stateobj['DDS%i_AMP'%i].setValue)
-            
-        self.plug.register_hook('SHUTR', self.ui.stateobj['SHUTR'].setValue)
-        self.plug.register_hook('SETPROG', self.pp_setprog)
-        self.plug.register_hook('PARAMETER', self.parameter_set)
-        self.plug.register_hook('RUNIT', self.pp_run)
-        self.plug.register_hook('NBRIGHT?', self.net_countabove)
-        self.plug.register_hook('LASTAVG?', self.net_lastavg)
-        self.plug.register_hook('MEMORY?', self.net_memory)
-        self.plug.register_hook('PARAMETER?', self.parameter_read)
-        
-
+    
+    # Choose a new project directory to save all files from experiments:
+    def chooseProjectDirectory(self):
+        fname = QtGui.QFileDialog.getExistingDirectory(self, 'Choose Project Folder', 
+                os.getcwd())
+        fname = fname.toUtf8().data() # Convert QString to normal string
+        if len(fname) == 0:
+            return # The dialog was cancelled!
+        self.projectSavePath = fname
+        self.ui.savePathLabelPath.setText(fname)
+        print 'Set project directory to ', fname
+    
+    # Choose file with AOM frequencies to run, instead of typing them in.
+    def chooseDDSFrequencyFile(self):
+        fname = QtGui.QFileDialog.getOpenFileName(self, 'Choose PP Parameter File', 
+                os.getcwd())
+        fname = fname.toUtf8().data() # Convert QString to normal string
+        try:
+            f = open(fname, 'r')
+        except IOError:
+            print 'Error opening PP parameter file ', fname
+            return False
+        else:
+            print fname
+            self.ui.rampSettingsBox.setText( f.read() )
+            f.close()
+    
     # This method opens a dialog that allows the user to select a .PP file from the
     # filesystem. The .PP is then sent to the Pulse Programmer to be stored in RAM.
     def openFile(self):
@@ -423,7 +434,6 @@ class MyForm(QtGui.QMainWindow):
     def closeEvent(self, event):
         print "Saving and quitting..."
         self.save_parameters()
-        self.plug.close() # Close network connections.
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)

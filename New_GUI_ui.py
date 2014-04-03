@@ -8,6 +8,7 @@
 from PyQt4 import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as np
+import os
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -17,6 +18,7 @@ except AttributeError:
 class Ui_Form(object):
     def setupUi(self, mainwindow):
         mainwindow.resize(900, 770) # Set default size of window, but it is resizable.
+        mainwindow.setMaximumSize(QtCore.QSize(900, 770))
         # Create the scroll area: 
         self.scrollArea = QtGui.QScrollArea(mainwindow)
         mainwindow.setCentralWidget(self.scrollArea) # Set central widget so it expands to fill mainwindow.
@@ -503,6 +505,7 @@ class Ui_Form(object):
 	self.SPcounter2Value = 0
 	self.parameterTable.setItem(33,1,QtGui.QTableWidgetItem(str(self.SPcounter2Value)))
 	
+	
 
         self.retranslateUi(Form)
 	# Connect event handlers to functions:
@@ -515,6 +518,40 @@ class Ui_Form(object):
         QtCore.QMetaObject.connectSlotsByName(mainwindow)
     
     
+        ### Create DAQ GUI ###
+        self.savePathLabel = QtGui.QLabel("Project Folder:", Form)
+        self.savePathLabel.setGeometry(QtCore.QRect(680, 20, 100, 20))
+        self.projectSavePathSelect = QtGui.QPushButton("Choose...", Form)
+        self.projectSavePathSelect.setGeometry(QtCore.QRect(820, 16, 71, 31))
+        QtCore.QObject.connect(self.projectSavePathSelect, QtCore.SIGNAL("clicked()"), mainwindow.chooseProjectDirectory)
+        self.savePathLabelPath = QtGui.QLabel(Form)
+        self.savePathLabelPath.setGeometry(QtCore.QRect(680, 40, 200, 40))
+        self.savePathLabelPath.setText(os.getcwd())
+        self.savePathLabelPath.setWordWrap(True)
+        self.savePathLabelPath.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        
+        self.dataTypeSelectorLabel = QtGui.QLabel("Data from PP to Graph:", Form)
+        self.dataTypeSelectorLabel.setGeometry(QtCore.QRect(680, 85, 150, 15))
+        self.plotPercentDarkCheckbox = QtGui.QCheckBox("% Dark", Form)
+        self.plotPercentDarkCheckbox.setGeometry(QtCore.QRect(680, 100, 70, 15))
+        self.plotAverageCheckbox = QtGui.QCheckBox("Average", Form)
+        self.plotAverageCheckbox.setGeometry(QtCore.QRect(750, 100, 70, 15))
+        
+        self.dataTypeSelectorLabel = QtGui.QLabel("Set PP Parameters:", Form)
+        self.dataTypeSelectorLabel.setGeometry(QtCore.QRect(680, 125, 150, 15))
+        self.openDDSCommandFileButton = QtGui.QPushButton("File...", Form)
+        self.openDDSCommandFileButton.setGeometry(QtCore.QRect(820, 119, 71, 31))
+        QtCore.QObject.connect(self.openDDSCommandFileButton, QtCore.SIGNAL("clicked()"), mainwindow.chooseDDSFrequencyFile)
+        self.rampSettingsBox = QtGui.QTextEdit("# Specify parameters like this for synchronous execution for each STEP in order:<br /># SYNCH<br /># [PARAM] = WIN1 WIN2...<br /># WINX=[MIN]:[STEP]:[MAX] or [NUM]<br /># ENDSYNCH", Form)
+        self.rampSettingsBox.setGeometry(QtCore.QRect(675, 145, 222, 400))
+        
+        self.memoryLabel = QtGui.QLabel("PP Memory: -", Form)
+        self.memoryLabel.setGeometry(QtCore.QRect(680, 600, 150, 15))
+        
+        self.startDAQButton = QtGui.QPushButton("GO", Form)
+        self.startDAQButton.setGeometry(QtCore.QRect(681, 680, 210, 31))
+        self.stopDAQButton = QtGui.QPushButton("STOP", Form)
+        self.stopDAQButton.setGeometry(QtCore.QRect(681, 705, 210, 31))
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtGui.QApplication.translate("Form", "Form", None, QtGui.QApplication.UnicodeUTF8))
