@@ -156,29 +156,29 @@ class MyForm(QtGui.QMainWindow):
     # Static DDS commands                                          #
     ################################################################
     def freq_changed(self, value):
-    	print "Changed frequency for DDS %i to %f" % (self.sender().dds_num, value)
-    	freq = value	# frequency in MHz
-    	dds = self.sender().dds_num # Refers to physical DDS chip, though these can be grouped on the same board.
+        print "Changed frequency for DDS %i to %f" % (self.sender().dds_num, value)
+        freq = value    # frequency in MHz
+        dds = self.sender().dds_num # Refers to physical DDS chip, though these can be grouped on the same board.
         board = self.boardChannelIndex[dds][0]
         chan = self.boardChannelIndex[dds][1]
         #print 'board ' + str(board) + ', channel ' + str(chan)
         self.boards[board].setFrequency(freq, chan, self._checkOutputs)
         return True
-    	
+        
     def amp_changed(self, value):
-    	print "Changed amplitude for DDS %i to %d" % (self.sender().dds_num, value)
-    	amp = int(max(0, value))
-    	dds = self.sender().dds_num # Refers to physical DDS chip, though these can be grouped on the same board.
+        print "Changed amplitude for DDS %i to %d" % (self.sender().dds_num, value)
+        amp = int(max(0, value))
+        dds = self.sender().dds_num # Refers to physical DDS chip, though these can be grouped on the same board.
         board = self.boardChannelIndex[dds][0]
         chan = self.boardChannelIndex[dds][1]
         #print 'board ' + str(board) + ', channel ' + str(chan)
         self.boards[board].setAmplitude(amp, chan, self._checkOutputs)
         return True
-    	
+        
     def phase_changed(self, value):
-    	print "Changed phase for DDS %i to %d" % (self.sender().dds_num, value)
-    	phase = int(max(0, value))
-    	dds = self.sender().dds_num # Refers to physical DDS chip, though these can be grouped on the same board.
+        print "Changed phase for DDS %i to %d" % (self.sender().dds_num, value)
+        phase = int(max(0, value))
+        dds = self.sender().dds_num # Refers to physical DDS chip, though these can be grouped on the same board.
         board = self.boardChannelIndex[dds][0]
         chan = self.boardChannelIndex[dds][1]
         #print 'board ' + str(board) + ', channel ' + str(chan)
@@ -186,8 +186,8 @@ class MyForm(QtGui.QMainWindow):
         return True
     
     def shutter_changed(self, value):
-    	print "Changed shutter to %d" % value
-    	shutter = int(max(0, value))
+        print "Changed shutter to %d" % value
+        shutter = int(max(0, value))
         self.xem.SetWireInValue(0x00, shutter<<12, 0xF000)    # address, value, mask
         self.xem.UpdateWireIns()
         return True
@@ -257,7 +257,7 @@ class MyForm(QtGui.QMainWindow):
             databuf = databuf + memword
 
         t1 = time.time()
-        self.xem.SetWireInValue(0x00, 0, 0x0FFF)	# start addr at zero
+        self.xem.SetWireInValue(0x00, 0, 0x0FFF)    # start addr at zero
         self.xem.UpdateWireIns()
         self.xem.ActivateTriggerIn(0x41, 1)
         self.xem.WriteToPipeIn(0x80, databuf)
@@ -295,7 +295,7 @@ class MyForm(QtGui.QMainWindow):
     # This method does the actual reading of data from the Pulse Programmer.
     def update_count(self):
         t1 = time.time()
-        self.xem.SetWireInValue(0x00, 3900, 0x0FFF)	# start addr at 3900
+        self.xem.SetWireInValue(0x00, 3900, 0x0FFF)    # start addr at 3900
         self.xem.UpdateWireIns()
         self.xem.ActivateTriggerIn(0x41, 1)
 
@@ -310,7 +310,7 @@ class MyForm(QtGui.QMainWindow):
             count=int(numpy.rint(count))
             self.data[addr][0] = addr
             self.data[addr][1] = count
-	        # Histogram
+            # Histogram
             if (count < 100):
                 self.data[count][2] = self.data[count][2] + 1
 
@@ -323,7 +323,7 @@ class MyForm(QtGui.QMainWindow):
     def pp_is_running(self):
         self.lock.acquire()
         try:
-			#Commented CWC 04032012
+            #Commented CWC 04032012
             data = '\x00'*32
             self.xem.ReadFromPipeOut(0xA1, data)
 
@@ -395,7 +395,7 @@ class MyForm(QtGui.QMainWindow):
 
         memory = 'RESULT:'
         for addr in range(100):
-	    memory = memory + " %i"%(self.data[addr][1])
+            memory = memory + " %i"%(self.data[addr][1])
 
         return memory + "\n"
     
@@ -413,7 +413,7 @@ class MyForm(QtGui.QMainWindow):
                 tot = tot + self.data[addr][1]
         
         if (count < 5):
-       	    return "RESULT: 0\n"
+            return "RESULT: 0\n"
         else:
             return "RESULT: %f\n"%(1.0*tot/count)
     
