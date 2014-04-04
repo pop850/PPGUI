@@ -370,7 +370,7 @@ class Ui_Form(object):
         self.PhaseLabel.setAlignment(QtCore.Qt.AlignCenter)
         
         # Create PyQtGraph graph
-        pg.setConfigOption('background', 'w') # Switch to using transp background and black foreground
+        pg.setConfigOption('background', 'w') # Switch to using white background and black foreground
         pg.setConfigOption('foreground', 'k')
         self.countsPlotWidget = pg.PlotWidget(Form, background='w') # Set the parent widget to be the Form window.
         self.countsPlotWidget.setGeometry(QtCore.QRect(3, 320, 447, 420))
@@ -381,12 +381,6 @@ class Ui_Form(object):
         self.counts_graph.showAxis('bottom', show=True)
         self.counts_graph.setLabel('bottom', text="Measurement/Counts")
         self.counts_graph.showGrid(y=True, alpha=0.5)
-        self.counts_graph.setEnabled(False)
-        
-        # Create a second PyQtGraph for the histogram (This is currently a hack until the next version of PyQtGraph has this feature)
-        self.histogram_graph = pg.ViewBox(parent=self.counts_graph)
-        self.histogram_graph.setGeometry(58, 18, 392, 380)
-        self.histogram_graph.setEnabled(False)
 
         # DAQ graph
         self.DAQ_PWin = pg.plot(title = "Fraction of Dark vs. Frequency", pen = 'r')
@@ -416,14 +410,14 @@ class Ui_Form(object):
         self.parameterTable = QtGui.QTableWidget(Form)
         self.parameterTable.setGeometry(QtCore.QRect(453, 15, 217, 752))
         self.parameterTable.setColumnCount(2)
-        self.parameterTable.setRowCount(34)
+        self.parameterTable.setRowCount(40)
         self.tableHeader = ["Parameter Name", "Value"]
         self.parameterTable.setHorizontalHeaderLabels(self.tableHeader)
         self.parameterTable.verticalHeader().setVisible(False)
         
         self.parameterTable.setColumnWidth(0,115)
         self.parameterTable.setColumnWidth(1,100)
-        for i in range(0,34):
+        for i in range(0,self.parameterTable.rowCount()):
             self.parameterTable.setRowHeight(i, 21)
     
         self.parameterTable.setItem(0,0,QtGui.QTableWidgetItem("A_BlueDetect"))
@@ -526,9 +520,14 @@ class Ui_Form(object):
         self.GurdsValue = 0
         self.parameterTable.setItem(32,1,QtGui.QTableWidgetItem(str(self.GurdsValue)))
         self.parameterTable.setItem(33,0,QtGui.QTableWidgetItem("SPcounter2"))
-	self.SPcounter2Value = 0
-	self.parameterTable.setItem(33,1,QtGui.QTableWidgetItem(str(self.SPcounter2Value)))
-
+        self.SPcounter2Value = 0
+        self.parameterTable.setItem(33,1,QtGui.QTableWidgetItem(str(self.SPcounter2Value)))
+	    
+	    # Create some extra boxes for future parameters:
+        for x in range(34, 40):
+            self.parameterTable.setItem(x,0,QtGui.QTableWidgetItem(""))
+            self.parameterTable.setItem(x,1,QtGui.QTableWidgetItem(""))
+        
         self.retranslateUi(Form)
         # Connect event handlers to functions:
         QtCore.QObject.connect(self.openButton, QtCore.SIGNAL("clicked()"), mainwindow.openFile)
@@ -575,10 +574,12 @@ class Ui_Form(object):
         self.memoryLabel = QtGui.QLabel("PP Memory: -", Form)
         self.memoryLabel.setGeometry(QtCore.QRect(680, 605, 150, 15))
         
-        self.startDAQButton = QtGui.QPushButton("Go!", Form)
+        self.startDAQButton = QtGui.QPushButton("Go", Form)
         self.startDAQButton.setGeometry(QtCore.QRect(681, 685, 210, 31))
+        QtCore.QObject.connect(self.startDAQButton, QtCore.SIGNAL("clicked()"), mainwindow.startDAQPressed)
         self.stopDAQButton = QtGui.QPushButton("Stop", Form)
         self.stopDAQButton.setGeometry(QtCore.QRect(681, 710, 210, 31))
+        QtCore.QObject.connect(self.stopDAQButton, QtCore.SIGNAL("clicked()"), mainwindow.stopDAQPressed)
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtGui.QApplication.translate("Form", "Form", None, QtGui.QApplication.UnicodeUTF8))

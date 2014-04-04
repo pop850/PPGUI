@@ -2,7 +2,6 @@
 # @author Alex Popescu
 # @author Naveena Karusala
 # Created 3/11/14
-# NOTE: Only one PP GUI can be open at a time!
 
 import sys
 import os
@@ -147,9 +146,6 @@ class MyForm(QtGui.QMainWindow):
         # Reset graph:
         self.data = numpy.zeros([100,3], 'Int32')
         self.ui.counts_graph.clear()
-        if self.ui.histogram_dataitem != None: #Try to remove the last histogram data object
-            self.ui.histogram_graph.removeItem(self.ui.histogram_dataitem)
-            self.ui.histogram_dataitem = None
     
     
     ################################################################
@@ -197,26 +193,6 @@ class MyForm(QtGui.QMainWindow):
     ################################################################
     # This method runs the .PP file that has been loaded into the Pulse Programmer.
     def pp_run(self):
-        DDS0FrequencyValue = self.ui.DDS0FrequencyBox.value()
-        DDS1FrequencyValue = self.ui.DDS1FrequencyBox.value()
-        DDS2FrequencyValue = self.ui.DDS2FrequencyBox.value()
-        DDS3FrequencyValue = self.ui.DDS3FrequencyBox.value()
-        DDS4FrequencyValue = self.ui.DDS4FrequencyBox.value()
-        DDS0AmplitudeValue = self.ui.DDS0AmplitudeBox.value()
-        DDS1AmplitudeValue = self.ui.DDS1AmplitudeBox.value()
-        DDS2AmplitudeValue = self.ui.DDS2AmplitudeBox.value()
-        DDS3AmplitudeValue = self.ui.DDS3AmplitudeBox.value()
-        DDS4AmplitudeValue = self.ui.DDS4AmplitudeBox.value()
-        DDS0PhaseValue = self.ui.DDS0PhaseBox.value()
-        DDS1PhaseValue = self.ui.DDS1PhaseBox.value()
-        DDS2PhaseValue = self.ui.DDS2PhaseBox.value()
-        DDS3PhaseValue = self.ui.DDS3PhaseBox.value()
-        DDS4PhaseValue = self.ui.DDS4PhaseBox.value()
-        SHUTRValue = self.ui.SHUTRBox.value()
-        THRES0Value = self.ui.THRES0Box.value()
-        THRES1Value = self.ui.THRES1Box.value()
-        #insert code to calculate and plot the graph
-        
         print "Running PP code..."
         self.xem.ActivateTriggerIn(0x40, 3)
         self.pp_upload()
@@ -280,16 +256,10 @@ class MyForm(QtGui.QMainWindow):
         self.ui.counts_graph.clear()
         # Plot counts vs experiment done:
         self.ui.counts_graph.plot(self.plotdata[:,0], self.plotdata[:,1], pen=(255,0,0))
-        # Plot count histogram:
-        children = self.ui.histogram_graph.allChildren() # Remove all current data in histogram graph.
+        max_counts = numpy.amax(self.plotdata[:,1])
+        max_hist = numpy.amax(self.plotdata[:,2])
         
-        if self.ui.histogram_dataitem != None: #Try to remove the last histogram data
-            self.ui.histogram_graph.removeItem(self.ui.histogram_dataitem)
-            self.ui.histogram_dataitem = None
-        
-        hist_data = pg.PlotDataItem(self.plotdata[:,0],self.plotdata[:,2], pen=(0,0,255))
-        self.ui.histogram_graph.addItem( hist_data )
-        self.ui.histogram_dataitem = hist_data
+        self.ui.counts_graph.plot(self.plotdata[:,0],numpy.multiply(self.plotdata[:,2], max_counts/max_hist), pen=(0,0,255))
         return
     
     # This method does the actual reading of data from the Pulse Programmer.
@@ -353,8 +323,10 @@ class MyForm(QtGui.QMainWindow):
         self.params = QtCore.QSettings(CONFIG_FILE, QtCore.QSettings.NativeFormat) # Create settings object.
         num_params = self.ui.parameterTable.rowCount()
         for x in range(0, num_params):
-            param = self.ui.parameterTable.item(x, 0)
-            value = self.params.value(param.text(), None)
+            param = self.ui.parameterTable.item(x, 0).text()
+            if param.isEmpty():
+                continue # Skip unused params
+            value = self.params.value(param.toUtf8().data(), None)
             if value == None:
                 value = "0"
             else:
@@ -368,7 +340,9 @@ class MyForm(QtGui.QMainWindow):
         for x in range(0, num_params):
             param = self.ui.parameterTable.item(x, 0)
             value = self.ui.parameterTable.item(x, 1)
-            self.params.setValue(param.text(), value.text())
+            if param.text().isEmpty(): #Skip this parameter if it is empty.
+                continue
+            self.params.setValue(param.text().toUtf8().data(), value.text().toUtf8().data())
     
     def parameter_set(self, name, value):
         self.params.setValue(name, value)
@@ -380,6 +354,7 @@ class MyForm(QtGui.QMainWindow):
     ################################################################
     # Network Functionality                                        #
     ################################################################
+    
     def service_netcomm(self, f, arg):
         if (self.pp_is_running() and (f != self.pp_run)):
             return "Wait\n"
@@ -434,6 +409,87 @@ class MyForm(QtGui.QMainWindow):
     def closeEvent(self, event):
         print "Saving and quitting..."
         self.save_parameters()
+    
+    # The "Go" button was pressed to start the DAQ.
+    def startDAQPressed(self):
+        #Interpret the ramp values:
+        rampValues = self.interpretRampValues()
+    
+    def stopDAQPressed(self):
+        print "hi"
+    
+    # Create a matrix of the different parameters that are changing, and what their value
+    # will be at each "PP-run" sample step.
+    def interpretRampValues(self):
+        text = self.ui.rampSettingsBox.toPlainText().toUtf8().data()
+        textlines = text.split("\n")
+        synch = False
+        usedParams = []
+        
+        for line in textlines:
+            validLine = line
+            if len(line.split("#")) > 1:
+                validLine = line.split("#")[0] # Only the part before the "#" is valid.
+            if len(validLine) == 0:
+                continue # This is an empty line.
+            if validLine.strip() == "SYNCH":
+                synch = True # Turn on synch
+            elif validLine.strip() == "ENDSYNCH":
+                synch = False # Turn off synch
+            
+            ops = validLine.split("=")
+            if len(ops) != 2:
+                print "Error parsing line, incorrect use of '=':\n%s\n" % line
+                continue
+            
+            param = ops[0].split()[0] # The parameter to vary
+            vals = ops[1].split()  # What values to set parameter to
+            
+            # Check this parameter is valid:
+            validParam = False
+            for x in range(0, self.ui.parameterTable.rowCount()):
+                ep = self.ui.parameterTable.item(x, 0).text().toUtf8().data()
+                if ep == param:
+                    validParam = True
+                    break
+            if validParam == False:
+                print "Parameter '%s' not found in line:\n%s\n" % (param, line)
+                continue
+            
+            # Make sure this param is noted as varying:
+            if param not in usedParams:
+                usedParams.append(param)
+            
+            # Now that param is validated, attempt to find ranges:
+            actualVals = []
+            for rg in vals:
+                srg = rg.split(":")
+                v = None
+                if len(srg) == 1:
+                    # This is simply a number
+                    v = [ float(srg[0].strip()) ]
+                elif len(srg) == 2:
+                    # A range, in increments of 1
+                    v = numpy.arange(float(srg[0].strip()), float(srg[1].strip())).tolist()
+                    v.append(float(srg[1].strip()))
+                elif len(srg) == 3:
+                    if float(srg[0].strip()) == float(srg[2].strip()):
+                        # Simply repeat the same value a certain number of times:
+                        v = [float(srg[0].strip())] * int(srg[1].strip())
+                    else:
+                        # Create a range with a STEP:
+                        v = numpy.arange(float(srg[0].strip()), float(srg[2].strip()), float(srg[1].strip())).tolist()
+                        v.append(float(srg[2].strip()))
+                else:
+                    print "Error evaluating '%s' in line:\n%s\n" % (rg, line)
+                actualVals.extend(v)
+            print param
+            print actualVals
+            
+            
+            
+        print usedParams
+            
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
