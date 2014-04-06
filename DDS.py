@@ -77,6 +77,9 @@ class MyForm(QtGui.QMainWindow):
         self.data = numpy.zeros([100,3], 'Int32')
         self.plotdata = numpy.zeros([100,3], 'Float32')
         self.ui.histogram_dataitem = None
+        
+        # Initialize DAQ:
+        self.DAQ_Running = False
     
     # Choose a new project directory to save all files from experiments:
     def chooseProjectDirectory(self):
@@ -222,7 +225,8 @@ class MyForm(QtGui.QMainWindow):
         for x in range(0, self.ui.parameterTable.rowCount()):
             param = self.ui.parameterTable.item(x, 0).text().toUtf8().data() # Convert to a normal string from QString
             value = self.ui.parameterTable.item(x, 1).text().toFloat()[0] # Convert value from QString to float
-            parameters.update({param : value})
+            if len(param) != 0:
+                parameters.update({param : value})
         
         code = pp2bytecode(self.codefile, self.boardChannelIndex, self.boards, parameters)
 
@@ -409,34 +413,119 @@ class MyForm(QtGui.QMainWindow):
     def closeEvent(self, event):
         print "Saving and quitting..."
         self.save_parameters()
+
+    ################################################################
+    # DAQ Functions                                                #
+    ################################################################
     
     # The "Go" button was pressed to start the DAQ.
     def startDAQPressed(self):
-        #Interpret the ramp values:
+        if self.DAQ_Running:
+            print "DAQ already running!"
+            return
+        self.DAQ_Running = True
+        print "Starting DAQ run"
+        self.DAQ_STOP = False
+        
+        # Execute on a background thread to not hold up GUI:
+        experiment_thread = threading.Thread(target=self.runDAQExperiment)
+        experiment_thread.start()
+        
+    
+    def runDAQExperiment(self):
+        # Interpret the ramp values:
         rampValues = self.interpretRampValues()
+        
+        if len(rampValues) == 0:
+            print "No values to ramp, aborting DAQ run!"
+            return
+        
+        # Get current parameter values from interface:
+        parameters = {}
+        self.DAQ_Params = parameters
+        for x in range(0, self.ui.parameterTable.rowCount()):
+            param = self.ui.parameterTable.item(x, 0).text().toUtf8().data() # Convert to a normal string from QString
+            value = self.ui.parameterTable.item(x, 1).text().toFloat()[0] # Convert value from QString to float
+            if len(param) != 0:
+                parameters[param] = value
+        
+        # Find the number of samples we will have to take:
+        mostSamples = 0
+        for p in rampValues:
+            if len(rampValues[p]) > mostSamples:
+                mostSamples = len(rampValues[p])
+        print "Starting run of %i samples for %i parameter(s)" % (mostSamples, len(rampValues))
+        
+        for s in range(0, mostSamples):
+            # Modify parameters that were changed in the DAQ ramp code:
+            for p in rampValues:
+                if s < len(rampValues[p]):
+                    parameters[p] = rampValues[p][s] # Use the value for this parameter at this timestep
+                else:
+                    parameters[p] = rampValues[p][-1] # If no value is defined, use last defined value.
+            
+            # All parameters are set, run PP experiments:
+            
+            # RUN PP EXPERIMENT HERE
+            print "Run PP Experiment"
+            time.sleep(0.01)
+            
+            # Check if stopped:
+            if self.DAQ_STOP is True:
+                self.DAQ_Running = False
+                return                
+            
+        self.DAQ_Running = False
+        
     
     def stopDAQPressed(self):
-        print "hi"
+        self.DAQ_STOP = True
+        self.DAQ_Running = False
+        print "DAQ Stopped"
     
     # Create a matrix of the different parameters that are changing, and what their value
     # will be at each "PP-run" sample step.
     def interpretRampValues(self):
         text = self.ui.rampSettingsBox.toPlainText().toUtf8().data()
         textlines = text.split("\n")
-        synch = False
-        usedParams = []
+        usedParams = [] # Parameters that have been parsed so far.
+        paramsOfTime = {} # Parameters as a function of time
+        sync = False # Whether SYNC is enabled.
+        startSyncTime = 0 # Timestep ON which a synch starts (timesteps start from 0)
+        currentSyncLength = 0 # The length of the current sync-box
         
         for line in textlines:
+            # Check for comments:
             validLine = line
             if len(line.split("#")) > 1:
                 validLine = line.split("#")[0] # Only the part before the "#" is valid.
             if len(validLine) == 0:
                 continue # This is an empty line.
-            if validLine.strip() == "SYNCH":
-                synch = True # Turn on synch
-            elif validLine.strip() == "ENDSYNCH":
-                synch = False # Turn off synch
             
+            # Check for SYNC commands:
+            if len(validLine.split(":")) == 2:
+                sp = validLine.split(":")
+                if sp[0].strip() == "SYNC":
+                    if sync is True:
+                        print "Error: SYNC is already on!: %s" % line
+                        continue
+                    sync = True # Turn on sync
+                    
+                    try:
+                        currentSyncLength = int(sp[1].strip())
+                    except:
+                        e = sys.exc_info()[0]
+                        print "Error %s interpreting SYNC steps, skipping: %s" % (e, line)
+                    continue
+            if validLine.strip() == "ENDSYNC":
+                if sync is False:
+                    print "Error: SYNC is already off!: %s" % line
+                    continue
+                sync = False # Turn off sync
+                startSyncTime = startSyncTime + currentSyncLength # Increment by length of last block
+                continue
+            
+            # Parse equality assignment:
             ops = validLine.split("=")
             if len(ops) != 2:
                 print "Error parsing line, incorrect use of '=':\n%s\n" % line
@@ -456,40 +545,63 @@ class MyForm(QtGui.QMainWindow):
                 print "Parameter '%s' not found in line:\n%s\n" % (param, line)
                 continue
             
-            # Make sure this param is noted as varying:
-            if param not in usedParams:
-                usedParams.append(param)
+            # Ensure that we are in a SYNC block, since we are assigning values:
+            if sync is not True:
+                print "Line is not in a SYNC block, skipping!:\n%s\n" % line
+                continue
             
-            # Now that param is validated, attempt to find ranges:
+            # Now that param is validated, attempt to find its values:
             actualVals = []
             for rg in vals:
                 srg = rg.split(":")
                 v = None
-                if len(srg) == 1:
-                    # This is simply a number
-                    v = [ float(srg[0].strip()) ]
-                elif len(srg) == 2:
-                    # A range, in increments of 1
-                    v = numpy.arange(float(srg[0].strip()), float(srg[1].strip())).tolist()
-                    v.append(float(srg[1].strip()))
-                elif len(srg) == 3:
-                    if float(srg[0].strip()) == float(srg[2].strip()):
-                        # Simply repeat the same value a certain number of times:
-                        v = [float(srg[0].strip())] * int(srg[1].strip())
+                
+                try:
+                    if len(srg) == 1:
+                        # This is simply a number
+                        v = [ float(srg[0].strip()) ]
+                    elif len(srg) == 2:
+                        # A range, in increments of 1
+                        v = numpy.arange(float(srg[0].strip()), float(srg[1].strip())).tolist()
+                        v.append(float(srg[1].strip()))
+                    elif len(srg) == 3:
+                            # Create a range with a STEP:
+                            v = numpy.linspace(float(srg[1].strip()), float(srg[2].strip()), num=float(srg[0].strip())).tolist()
                     else:
-                        # Create a range with a STEP:
-                        v = numpy.arange(float(srg[0].strip()), float(srg[2].strip()), float(srg[1].strip())).tolist()
-                        v.append(float(srg[2].strip()))
-                else:
-                    print "Error evaluating '%s' in line:\n%s\n" % (rg, line)
-                actualVals.extend(v)
-            print param
-            print actualVals
+                        print "Error evaluating '%s' in line:\n%s\n" % (rg, line)
+                        continue
+                    actualVals.extend(v)
+                except:
+                    e = sys.exc_info()[0]
+                    print "Error %s parsing line:\n%s\n" % (e, line)
+                    continue
+            # Ensure we are adding the right length:
+            if len(actualVals) != currentSyncLength:
+                print "Number of steps in SYNC-block (%i) not equal to steps in line:\n%s\n" % (currentSyncLength, line)
+                continue
             
+            # Use for debugging:
+            #print param
+            #print actualVals
             
+            # Add a new entry in the parameters as a function of time, if necessary
+            if param not in usedParams:
+                paramsOfTime[param] = []
+                usedParams.append(param)
             
-        print usedParams
-            
+            # Fill with last value, if necessary.
+            if len(paramsOfTime[param]) < startSyncTime:
+                paramsOfTime[param].extend( [paramsOfTime[param][-1]] * (startSyncTime - len(paramsOfTime[param])) )
+                print "Warning: %s filled %i values!" % (param, startSyncTime - len(paramsOfTime[param]))
+            paramsOfTime[param].extend( actualVals )
+        
+        # Use for debugging:
+        print "Parameters as a function of DAQ run:"
+        for param in paramsOfTime:
+            print param, paramsOfTime[param]
+        
+        return paramsOfTime
+    
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)

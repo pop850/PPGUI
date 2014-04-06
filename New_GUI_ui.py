@@ -568,7 +568,9 @@ class Ui_Form(object):
         self.openDDSCommandFileButton = QtGui.QPushButton("File...", Form)
         self.openDDSCommandFileButton.setGeometry(QtCore.QRect(820, 145, 71, 31))
         QtCore.QObject.connect(self.openDDSCommandFileButton, QtCore.SIGNAL("clicked()"), mainwindow.chooseDDSFrequencyFile)
-        self.rampSettingsBox = QtGui.QTextEdit("# Specify parameters like this for synchronous execution for each STEP in order:<br /># SYNCH<br /># [PARAM] = WIN1 WIN2...<br /># WINX=[MIN]:[STEP]:[MAX] or [NUM]<br /># ENDSYNCH", Form)
+        self.rampSettingsBox = QtGui.QTextEdit("# Specify parameters like this<br /># for synchronous execution for<br /># each STEP in order:<br /># SYNC:[NUM STEPS]<br /># [PARAM] = R1 R2 ... Rn<br /># Ri=[NUM STEPS]:[START]:[END] OR [START]:[END] OR [NUM]<br /># ENDSYNC", Form)
+        self.rampSettingsBox.setWordWrapMode(QtGui.QTextOption.NoWrap)
+        self.rampSettingsBox.setStyleSheet("font-size:11pt; font-family:Courier, Courier New")
         self.rampSettingsBox.setGeometry(QtCore.QRect(675, 170, 222, 400))
         
         self.memoryLabel = QtGui.QLabel("PP Memory: -", Form)
