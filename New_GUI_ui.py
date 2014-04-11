@@ -8,6 +8,7 @@
 from PyQt4 import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as np
+import os
 
 try:
     _fromUtf8 = QtCore.QString.fromUtf8
@@ -17,6 +18,7 @@ except AttributeError:
 class Ui_Form(object):
     def setupUi(self, mainwindow):
         mainwindow.resize(900, 770) # Set default size of window, but it is resizable.
+        mainwindow.setMaximumSize(QtCore.QSize(900, 770))
         # Create the scroll area: 
         self.scrollArea = QtGui.QScrollArea(mainwindow)
         mainwindow.setCentralWidget(self.scrollArea) # Set central widget so it expands to fill mainwindow.
@@ -386,28 +388,28 @@ class Ui_Form(object):
         self.histogram_graph.setGeometry(58, 18, 392, 380)
         self.histogram_graph.setEnabled(False)
 
-        # DAQ graph
-        self.DAQ_PWin = pg.plot(title = "Fraction of Dark vs. Frequency", pen = 'r')
-        self.DAQ_PWin.setLabel('left', "Fraction of Dark", units='%')
-        self.DAQ_PWin.setLabel('bottom', "Frequency", units='s^-1')
-        self.DAQ_PWin.showGrid(x=False, y=True)
-
-        lr = pg.LinearRegionItem([400,700])
-        lr.setZValue(-10)
-        self.DAQ_PWin.addItem(lr)
-
-        zoomed = pg.plot(title="Zoom on selected region")
-        zoomed.setLabel('left', "Fraction of Dark", units='%')
-        zoomed.setLabel('bottom', "Frequency", units='s^-1')
-        zoomed.showGrid(x=False, y=True)
-        #zoomed.plot()
-        def updatePlot():
-            zoomed.setXRange(*lr.getRegion(), padding=0)
-        def updateRegion():
-            lr.setRegion(zoomed.getViewBox().viewRange()[0])
-        lr.sigRegionChanged.connect(updatePlot)
-        zoomed.sigXRangeChanged.connect(updateRegion)
-        updatePlot()
+##        # DAQ graph
+##        self.DAQ_PWin = pg.plot(title = "Fraction of Dark vs. Frequency", pen = 'r')
+##        self.DAQ_PWin.setLabel('left', "Fraction of Dark", units='%')
+##        self.DAQ_PWin.setLabel('bottom', "Frequency", units='s^-1')
+##        self.DAQ_PWin.showGrid(x=False, y=True)
+##
+##        lr = pg.LinearRegionItem([400,700])
+##        lr.setZValue(-10)
+##        self.DAQ_PWin.addItem(lr)
+##
+##        zoomed = pg.plot(title="Zoom on selected region")
+##        zoomed.setLabel('left', "Fraction of Dark", units='%')
+##        zoomed.setLabel('bottom', "Frequency", units='s^-1')
+##        zoomed.showGrid(x=False, y=True)
+##        #zoomed.plot()
+##        def updatePlot():
+##            zoomed.setXRange(*lr.getRegion(), padding=0)
+##        def updateRegion():
+##            lr.setRegion(zoomed.getViewBox().viewRange()[0])
+##        lr.sigRegionChanged.connect(updatePlot)
+##        zoomed.sigXRangeChanged.connect(updateRegion)
+##        updatePlot()
         
         
         # Create parameter table
@@ -526,9 +528,49 @@ class Ui_Form(object):
         self.parameterTable.setItem(33,0,QtGui.QTableWidgetItem("SPcounter2"))
         self.SPcounter2Value = 0
         self.parameterTable.setItem(33,1,QtGui.QTableWidgetItem(str(self.SPcounter2Value)))
-        
 
-        self.retranslateUi(Form)
+        self.retranslateUi(Form)    
+    
+        ### Create DAQ GUI ###
+        self.savePathLabel = QtGui.QLabel("Project Folder:", Form)
+        self.savePathLabel.setGeometry(QtCore.QRect(680, 20, 100, 20))
+        self.projectSavePathSelect = QtGui.QPushButton("Choose...", Form)
+        self.projectSavePathSelect.setGeometry(QtCore.QRect(820, 16, 71, 31))
+        QtCore.QObject.connect(self.projectSavePathSelect, QtCore.SIGNAL("clicked()"), mainwindow.chooseProjectDirectory)
+        self.savePathLabelPath = QtGui.QLabel(Form)
+        self.savePathLabelPath.setGeometry(QtCore.QRect(680, 40, 200, 40))
+        self.savePathLabelPath.setText(os.getcwd())
+        self.savePathLabelPath.setWordWrap(True)
+        self.savePathLabelPath.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+        
+        self.dataTypeSelectorLabel = QtGui.QLabel("Data from PP to Graph:", Form)
+        self.dataTypeSelectorLabel.setGeometry(QtCore.QRect(680, 85, 150, 15))
+        self.plotPercentDarkCheckbox = QtGui.QCheckBox("% Dark", Form)
+        self.plotPercentDarkCheckbox.setGeometry(QtCore.QRect(680, 100, 70, 15))
+        self.plotAverageCheckbox = QtGui.QCheckBox("Average", Form)
+        self.plotAverageCheckbox.setGeometry(QtCore.QRect(750, 100, 70, 15))
+        
+        self.xAxisSelectorLabel = QtGui.QLabel("X-Axis Parameter:", Form)
+        self.xAxisSelectorLabel.setGeometry(QtCore.QRect(680, 125, 100, 15))
+        self.xAxisSetLabel = QtGui.QLineEdit(Form)
+        self.xAxisSetLabel.setGeometry(QtCore.QRect(770, 125, 115, 17))
+        
+        self.dataTypeSelectorLabel = QtGui.QLabel("Set PP Parameters:", Form)
+        self.dataTypeSelectorLabel.setGeometry(QtCore.QRect(680, 152, 150, 15))
+        self.openDDSCommandFileButton = QtGui.QPushButton("File...", Form)
+        self.openDDSCommandFileButton.setGeometry(QtCore.QRect(820, 145, 71, 31))
+        QtCore.QObject.connect(self.openDDSCommandFileButton, QtCore.SIGNAL("clicked()"), mainwindow.chooseDDSFrequencyFile)
+        self.rampSettingsBox = QtGui.QTextEdit("# Specify parameters like this for synchronous execution for each STEP in order:<br /># SYNCH<br /># [PARAM] = WIN1 WIN2...<br /># WINX=[MIN]:[STEP]:[MAX] or [NUM]<br /># ENDSYNCH", Form)
+        self.rampSettingsBox.setGeometry(QtCore.QRect(675, 170, 222, 400))
+        
+        self.memoryLabel = QtGui.QLabel("PP Memory: -", Form)
+        self.memoryLabel.setGeometry(QtCore.QRect(680, 605, 150, 15))
+        
+        self.startDAQButton = QtGui.QPushButton("Go!", Form)
+        self.startDAQButton.setGeometry(QtCore.QRect(681, 685, 210, 31))
+        self.stopDAQButton = QtGui.QPushButton("Stop", Form)
+        self.stopDAQButton.setGeometry(QtCore.QRect(681, 710, 210, 31))
+
         # Connect event handlers to functions:
         QtCore.QObject.connect(self.openButton, QtCore.SIGNAL("clicked()"), mainwindow.openFile)
         QtCore.QObject.connect(self.saveAsButton, QtCore.SIGNAL("clicked()"), mainwindow.saveAs)
@@ -536,9 +578,9 @@ class Ui_Form(object):
         QtCore.QObject.connect(self.stopButton, QtCore.SIGNAL("clicked()"), mainwindow.stop)
         QtCore.QObject.connect(self.readoutButton, QtCore.SIGNAL("clicked()"), mainwindow.readout)
         QtCore.QObject.connect(self.resetPlotButton, QtCore.SIGNAL("clicked()"), mainwindow.resetPlot)
+        # Connect clicking "Go" to opening DAQ graph
+        QtCore.QObject.connect(self.startDAQButton, QtCore.SIGNAL("clicked()"), mainwindow.DAQreadout)
         QtCore.QMetaObject.connectSlotsByName(mainwindow)
-    
-    
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtGui.QApplication.translate("Form", "Form", None, QtGui.QApplication.UnicodeUTF8))

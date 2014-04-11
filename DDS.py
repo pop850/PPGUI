@@ -18,7 +18,6 @@ import ok
 import numpy
 from numpy import arange, sin, pi
 import threading, socket, time
-import etherplug
 
 from ppcomp import *
 from adBoard import *
@@ -32,6 +31,8 @@ CONFIG_FILE = "BlackPulseProgrammerConfig.ddscon"
 class MyForm(QtGui.QMainWindow):
     def __init__(self, parent=None):
         QtGui.QWidget.__init__(self, parent)
+        
+        self.projectSavePath = os.getcwd()
         
         # Configurable DDS properties:
         self._DDS_name = 'Black_DDS'  # Must match FPGA name
@@ -77,23 +78,33 @@ class MyForm(QtGui.QMainWindow):
         self.data = numpy.zeros([100,3], 'Int32')
         self.plotdata = numpy.zeros([100,3], 'Float32')
         self.ui.histogram_dataitem = None
-            
-        # Start network
-        self.plug = etherplug.etherplug(self.service_netcomm, NETPORT)
-        for i in range(len(self.boardChannelIndex)):
-            self.plug.register_hook('FREQ%i'%i, self.ui.stateobj['DDS%i_FREQ'%i].setValue)
-            self.plug.register_hook('AMP%i'%i, self.ui.stateobj['DDS%i_AMP'%i].setValue)
-            
-        self.plug.register_hook('SHUTR', self.ui.stateobj['SHUTR'].setValue)
-        self.plug.register_hook('SETPROG', self.pp_setprog)
-        self.plug.register_hook('PARAMETER', self.parameter_set)
-        self.plug.register_hook('RUNIT', self.pp_run)
-        self.plug.register_hook('NBRIGHT?', self.net_countabove)
-        self.plug.register_hook('LASTAVG?', self.net_lastavg)
-        self.plug.register_hook('MEMORY?', self.net_memory)
-        self.plug.register_hook('PARAMETER?', self.parameter_read)
-        
-
+    
+    # Choose a new project directory to save all files from experiments:
+    def chooseProjectDirectory(self):
+        fname = QtGui.QFileDialog.getExistingDirectory(self, 'Choose Project Folder', 
+                os.getcwd())
+        fname = fname.toUtf8().data() # Convert QString to normal string
+        if len(fname) == 0:
+            return # The dialog was cancelled!
+        self.projectSavePath = fname
+        self.ui.savePathLabelPath.setText(fname)
+        print 'Set project directory to ', fname
+    
+    # Choose file with AOM frequencies to run, instead of typing them in.
+    def chooseDDSFrequencyFile(self):
+        fname = QtGui.QFileDialog.getOpenFileName(self, 'Choose PP Parameter File', 
+                os.getcwd())
+        fname = fname.toUtf8().data() # Convert QString to normal string
+        try:
+            f = open(fname, 'r')
+        except IOError:
+            print 'Error opening PP parameter file ', fname
+            return False
+        else:
+            print fname
+            self.ui.rampSettingsBox.setText( f.read() )
+            f.close()
+    
     # This method opens a dialog that allows the user to select a .PP file from the
     # filesystem. The .PP is then sent to the Pulse Programmer to be stored in RAM.
     def openFile(self):
@@ -130,7 +141,23 @@ class MyForm(QtGui.QMainWindow):
             print E
         
         return True
-    
+
+    # This method saves the DAQ graph to a selected data file
+
+##    def DAQsaveAs(self):
+##        data = self.data
+##        fname = QtGui.QFileDialog.getSaveFileName(self, 'Save Data File', 
+##                os.getcwd())
+##        
+##        try:
+##            fd = open(fname, 'w')
+##            for i in range(len(data)):
+##                fd.write(What "data" goes in here?)
+##            fd.close
+##        except Exception, E:
+##            print E
+##        
+##        return True
         
     def resetPlot(self):
         # Reset graph:
@@ -280,6 +307,31 @@ class MyForm(QtGui.QMainWindow):
         self.ui.histogram_graph.addItem( hist_data )
         self.ui.histogram_dataitem = hist_data
         return
+
+    # This method opens up DAQ graph and draws Percent Dark graph
+    def DAQreadout(self):
+        self.DAQ_PWin = pg.plot(title = "Fraction of Dark vs. Frequency", pen = 'r')
+        self.DAQ_PWin.setLabel('left', "Fraction of Dark", units='%')
+        self.DAQ_PWin.setLabel('bottom', "Frequency", units='s^-1')
+        self.DAQ_PWin.showGrid(x=False, y=True)
+
+        lr = pg.LinearRegionItem([400,700])
+        lr.setZValue(-10)
+        self.DAQ_PWin.addItem(lr)
+
+        zoomed = pg.plot(title="Zoom on selected region")
+        zoomed.setLabel('left', "Fraction of Dark", units='%')
+        zoomed.setLabel('bottom', "Frequency", units='s^-1')
+        zoomed.showGrid(x=False, y=True)
+        #zoomed.plot()
+        def updatePlot():
+            zoomed.setXRange(*lr.getRegion(), padding=0)
+        def updateRegion():
+            lr.setRegion(zoomed.getViewBox().viewRange()[0])
+        lr.sigRegionChanged.connect(updatePlot)
+        zoomed.sigXRangeChanged.connect(updateRegion)
+        updatePlot()
+        
     
     # This method does the actual reading of data from the Pulse Programmer.
     def update_count(self):
@@ -423,7 +475,6 @@ class MyForm(QtGui.QMainWindow):
     def closeEvent(self, event):
         print "Saving and quitting..."
         self.save_parameters()
-        self.plug.close() # Close network connections.
 
 if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
