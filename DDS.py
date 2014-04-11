@@ -468,6 +468,9 @@ class MyForm(QtGui.QMainWindow):
         print "Starting DAQ run"
         self.DAQ_STOP = False
         
+        # Draw graph:
+        self.DAQreadout()
+        
         # Execute on a background thread to not hold up GUI:
         experiment_thread = threading.Thread(target=self.runDAQExperiment)
         experiment_thread.start()
