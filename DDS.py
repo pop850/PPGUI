@@ -235,7 +235,7 @@ class MyForm(QtGui.QMainWindow):
     # This method loads the specified .PP file (that was selected in OpenFile()) into the
     # Pulse Programmer. The .PP file specifies a series of commands to execute once the
     # trigger is activated.
-    def pp_upload(self):
+    def pp_upload(self, overrideParams=None):
         print "Uploading .PP code..."
         parameters = {}
         for x in range(0, self.ui.parameterTable.rowCount()):
@@ -243,9 +243,11 @@ class MyForm(QtGui.QMainWindow):
             value = self.ui.parameterTable.item(x, 1).text().toFloat()[0] # Convert value from QString to float
             if len(param) != 0:
                 parameters.update({param : value})
+        if overrideParams is not None:
+            parameters = overrideParams # If parameters are set for override.
         
         code = pp2bytecode(self.codefile, self.boardChannelIndex, self.boards, parameters)
-
+        
         databuf = ''
         for op, arg in code:
             memword = '%c%c'%((arg&0xFF), (arg>>8)&0xFF) + '%c%c'%((arg>>16)&0xFF, op + (arg>>24))
