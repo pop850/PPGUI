@@ -567,9 +567,6 @@ class Ui_Form(object):
         QtCore.QObject.connect(self.stopButton, QtCore.SIGNAL("clicked()"), mainwindow.stop)
         QtCore.QObject.connect(self.readoutButton, QtCore.SIGNAL("clicked()"), mainwindow.readout)
         QtCore.QObject.connect(self.resetPlotButton, QtCore.SIGNAL("clicked()"), mainwindow.resetPlot)
-        # Connect clicking "Go" to opening DAQ graph
-        QtCore.QObject.connect(self.startDAQButton, QtCore.SIGNAL("clicked()"), mainwindow.DAQreadout)
-        QtCore.QMetaObject.connectSlotsByName(mainwindow)
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtGui.QApplication.translate("Form", "Form", None, QtGui.QApplication.UnicodeUTF8))
