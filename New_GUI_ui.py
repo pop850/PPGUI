@@ -380,31 +380,7 @@ class Ui_Form(object):
         self.counts_graph.setLabel('left', text="Counts/Prob. Dist.")
         self.counts_graph.showAxis('bottom', show=True)
         self.counts_graph.setLabel('bottom', text="Measurement/Counts")
-        self.counts_graph.showGrid(y=True, alpha=0.5)
-
-##        # DAQ graph
-##        self.DAQ_PWin = pg.plot(title = "Fraction of Dark vs. Frequency", pen = 'r')
-##        self.DAQ_PWin.setLabel('left', "Fraction of Dark", units='%')
-##        self.DAQ_PWin.setLabel('bottom', "Frequency", units='s^-1')
-##        self.DAQ_PWin.showGrid(x=False, y=True)
-##
-##        lr = pg.LinearRegionItem([400,700])
-##        lr.setZValue(-10)
-##        self.DAQ_PWin.addItem(lr)
-##
-##        zoomed = pg.plot(title="Zoom on selected region")
-##        zoomed.setLabel('left', "Fraction of Dark", units='%')
-##        zoomed.setLabel('bottom', "Frequency", units='s^-1')
-##        zoomed.showGrid(x=False, y=True)
-##        #zoomed.plot()
-##        def updatePlot():
-##            zoomed.setXRange(*lr.getRegion(), padding=0)
-##        def updateRegion():
-##            lr.setRegion(zoomed.getViewBox().viewRange()[0])
-##        lr.sigRegionChanged.connect(updatePlot)
-##        zoomed.sigXRangeChanged.connect(updateRegion)
-##        updatePlot()
-        
+        self.counts_graph.showGrid(y=True, alpha=0.5)        
         
         # Create parameter table
         self.parameterTable = QtGui.QTableWidget(Form)

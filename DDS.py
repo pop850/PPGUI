@@ -77,6 +77,10 @@ class MyForm(QtGui.QMainWindow):
         self.data = numpy.zeros([100,3], 'Int32')
         self.plotdata = numpy.zeros([100,3], 'Float32')
         self.ui.histogram_dataitem = None
+
+        # Initialize DAQ graph with zero values
+        self.DAQdata = numpy.zeros([100,3], 'Int32')
+        self.DAQplotdata = numpy.zeros([100,3], 'Float32')
         
         # Initialize DAQ:
         self.DAQ_Running = False
@@ -143,23 +147,6 @@ class MyForm(QtGui.QMainWindow):
             print E
         
         return True
-
-    # This method saves the DAQ graph to a selected data file
-
-##    def DAQsaveAs(self):
-##        data = self.data
-##        fname = QtGui.QFileDialog.getSaveFileName(self, 'Save Data File', 
-##                os.getcwd())
-##        
-##        try:
-##            fd = open(fname, 'w')
-##            for i in range(len(data)):
-##                fd.write(What "data" goes in here?)
-##            fd.close
-##        except Exception, E:
-##            print E
-##        
-##        return True
         
     def resetPlot(self):
         # Reset graph:
@@ -211,10 +198,13 @@ class MyForm(QtGui.QMainWindow):
     # Pulse Sequencer Commands                                     #
     ################################################################
     # This method runs the .PP file that has been loaded into the Pulse Programmer.
-    def pp_run(self):
+    def pp_run(self, extraParameters=None):
         print "Running PP code..."
         self.xem.ActivateTriggerIn(0x40, 3)
-        self.pp_upload()
+        if extraParameters != None:
+            self.pp_upload(extraParameters)
+        else:
+            self.pp_upload()
         self.xem.ActivateTriggerIn(0x40, 2)
 
         time.sleep(0.2)
@@ -281,30 +271,6 @@ class MyForm(QtGui.QMainWindow):
         
         self.ui.counts_graph.plot(self.plotdata[:,0],numpy.multiply(self.plotdata[:,2], max_counts/max_hist), pen=(0,0,255))
         return
-
-    # This method opens up DAQ graph and draws Percent Dark graph
-    def DAQreadout(self):
-        self.DAQ_PWin = pg.plot(title = "Fraction of Dark vs. Frequency", pen = 'r')
-        self.DAQ_PWin.setLabel('left', "Fraction of Dark", units='%')
-        self.DAQ_PWin.setLabel('bottom', "Frequency", units='s^-1')
-        self.DAQ_PWin.showGrid(x=False, y=True)
-
-        lr = pg.LinearRegionItem([400,700])
-        lr.setZValue(-10)
-        self.DAQ_PWin.addItem(lr)
-
-        zoomed = pg.plot(title="Zoom on selected region")
-        zoomed.setLabel('left', "Fraction of Dark", units='%')
-        zoomed.setLabel('bottom', "Frequency", units='s^-1')
-        zoomed.showGrid(x=False, y=True)
-        #zoomed.plot()
-        def updatePlot():
-            zoomed.setXRange(*lr.getRegion(), padding=0)
-        def updateRegion():
-            lr.setRegion(zoomed.getViewBox().viewRange()[0])
-        lr.sigRegionChanged.connect(updatePlot)
-        zoomed.sigXRangeChanged.connect(updateRegion)
-        updatePlot()
         
     
     # This method does the actual reading of data from the Pulse Programmer.
@@ -447,8 +413,8 @@ class MyForm(QtGui.QMainWindow):
                 count = count + 2
             elif (self.data[addr][1] > threshold0):
                 count = count + 1
-
-        return "RESULT: %d\n"%(count)
+        # Net count above
+        return count
     
     
     def closeEvent(self, event):
@@ -496,6 +462,9 @@ class MyForm(QtGui.QMainWindow):
             if len(rampValues[p]) > mostSamples:
                 mostSamples = len(rampValues[p])
         print "Starting run of %i samples for %i parameter(s)" % (mostSamples, len(rampValues))
+
+        # Initializing list of percent dark values
+        listDark = []
         
         for s in range(0, mostSamples):
             # Modify parameters that were changed in the DAQ ramp code:
@@ -507,9 +476,18 @@ class MyForm(QtGui.QMainWindow):
             
             # All parameters are set, run PP experiments:
             
-            # RUN PP EXPERIMENT HERE
+            # UPLOAD AND RUN PP EXPERIMENT HERE
             print "Run PP Experiment"
-            time.sleep(0.01)
+            self.pp_run(parameters)
+            netCountAbove = self.netCountAbove()
+            percentDark = 100 - netCountAbove
+            listDark.append(percentDark)
+
+            self.xValues = parameters
+            self.yValues = listDark
+            
+            # Plot percent dark vs parameters
+            self.ui.DAQ_PWin.plot(self.xValues, self.yValues, pen=(0,255,0))            
             
             # Check if stopped:
             if self.DAQ_STOP is True:
@@ -518,11 +496,54 @@ class MyForm(QtGui.QMainWindow):
             
         self.DAQ_Running = False
         
-    
+    # This method opens up DAQ graph
+    def DAQreadout(self):
+        self.DAQ_PWin = pg.plot(title = "Fraction of Dark vs. Frequency", pen = 'r')
+        self.DAQ_PWin.setLabel('left', "Fraction of Dark", units='%')
+        self.DAQ_PWin.setLabel('bottom', "Frequency", units='s^-1')
+        self.DAQ_PWin.showGrid(x=False, y=True)
+
+        lr = pg.LinearRegionItem([400,700])
+        lr.setZValue(-10)
+        self.DAQ_PWin.addItem(lr)
+
+        zoomed = pg.plot(title="Zoom on selected region")
+        zoomed.setLabel('left', "Fraction of Dark", units='%')
+        zoomed.setLabel('bottom', "Frequency", units='s^-1')
+        zoomed.showGrid(x=False, y=True)
+        #zoomed.plot()
+        def updatePlot():
+            zoomed.setXRange(*lr.getRegion(), padding=0)
+        def updateRegion():
+            lr.setRegion(zoomed.getViewBox().viewRange()[0])
+        lr.sigRegionChanged.connect(updatePlot)
+        zoomed.sigXRangeChanged.connect(updateRegion)
+        updatePlot()
+
+        
+        
     def stopDAQPressed(self):
         self.DAQ_STOP = True
         self.DAQ_Running = False
         print "DAQ Stopped"
+
+
+     # This method saves the DAQ graph to a selected data file
+
+##    def DAQsaveAs(self):
+##        data = self.data
+##        fname = QtGui.QFileDialog.getSaveFileName(self, 'Save Data File', 
+##                os.getcwd())
+##        
+##        try:
+##            fd = open(fname, 'w')
+##            for i in range(len(data)):
+##                fd.write(What "data" goes in here?)
+##            fd.close
+##        except Exception, E:
+##            print E
+##        
+##        return True
     
     # Create a matrix of the different parameters that are changing, and what their value
     # will be at each "PP-run" sample step.
