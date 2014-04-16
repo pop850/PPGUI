@@ -124,12 +124,12 @@ class MyForm(QtGui.QMainWindow):
         except IOError:
             print 'Error opening PP file ', fname
             return False
-        else:
-            print fname
-            f.close()
-            self.codefile = fname
-            # Send the .PP file to the Pulse Programmer
-            return self.pp_upload()
+        
+        print fname
+        f.close()
+        self.codefile = fname
+        # Send the .PP file to the Pulse Programmer
+        return self.pp_upload()
     
     # This method saves the data obtained from the Pulse Programmer to a selected data
     # file.
@@ -390,8 +390,8 @@ class MyForm(QtGui.QMainWindow):
     def net_lastavg(self):
         count = 0
         tot = 0
-        threshold0 = self.ui.stateobj['THRES0'].value()
-        threshold1 = self.ui.stateobj['THRES1'].value()
+        threshold0 = self.ui.THRES0Box.value()
+        threshold1 = self.ui.THRES1Box.value()
         for addr in range(100):
             if (self.data[addr][1] > threshold1):
                 count = count + 2
@@ -408,14 +408,14 @@ class MyForm(QtGui.QMainWindow):
     def net_countabove(self):
         self.readout()
         count = 0
-        threshold0 = self.ui.stateobj['THRES0'].value()
-        threshold1 = self.ui.stateobj['THRES1'].value()
+        threshold0 = self.ui.THRES0Box.value()
+        threshold1 = self.ui.THRES1Box.value()
         for addr in range(100):
             if (self.data[addr][1] > threshold1):
                 count = count + 2
             elif (self.data[addr][1] > threshold0):
                 count = count + 1
-        # Net count above
+        # Net count above threshold 0, below threshold 1?
         return count
     
     
@@ -436,12 +436,10 @@ class MyForm(QtGui.QMainWindow):
         print "Starting DAQ run"
         self.DAQ_STOP = False
         
-        # Draw graph:
-        self.DAQreadout()
-        
         # Execute on a background thread to not hold up GUI:
-        experiment_thread = threading.Thread(target=self.runDAQExperiment, args=[self.ui.parameterTable])
-        experiment_thread.start()
+        #experiment_thread = threading.Thread(target=self.runDAQExperiment, args=[self.ui.parameterTable])
+        #experiment_thread.start()
+        self.runDAQExperiment(self.ui.parameterTable)
         
     
     def runDAQExperiment(self, UIparamTable):
@@ -451,6 +449,22 @@ class MyForm(QtGui.QMainWindow):
         if len(rampValues) == 0:
             print "No values to ramp, aborting DAQ run!"
             return
+        
+        # Find x-axis values:
+        xparam_name = self.ui.xAxisSetLabel.text().toUtf8().data()
+        print rampValues.keys()
+        print xparam_name
+        if xparam_name not in rampValues.keys():
+            print "X parameter: '%s' not valid! Capitalization matters!" % xparam_name
+            return False
+        xparam_vals = rampValues[xparam_name]
+        
+        # CREATE GRAPH:
+        DAQ_PWin = pg.plot(title = "Percent Dark vs. %s"%xparam_name, pen = 'r') # Create new plot window
+        DAQ_PWin.setLabel('left', "Percent Dark", units='%')
+        DAQ_PWin.setLabel('bottom', xparam_name)
+        DAQ_PWin.showGrid(x=False, y=True)
+        DAQ_PWin_graph = DAQ_PWin.getPlotItem()
         
         # Get current parameter values from interface:
         parameters = {}
@@ -463,17 +477,12 @@ class MyForm(QtGui.QMainWindow):
                 parameters[param] = value
                 cellRefs[param] = UIparamTable.item(x, 1)
         
-        # Find the number of samples we will have to take:
-        mostSamples = 0
-        for p in rampValues:
-            if len(rampValues[p]) > mostSamples:
-                mostSamples = len(rampValues[p])
-        print "Starting run of %i samples for %i parameter(s)" % (mostSamples, len(rampValues))
+        print "Starting run of %i samples for %i parameter(s)" % (len(xparam_vals), len(rampValues))
 
         # Initializing list of percent dark values
         listDark = []
         
-        for s in range(0, mostSamples):
+        for s in range(0, len(xparam_vals)):
             # Modify parameters that were changed in the DAQ ramp code:
             for p in rampValues:
                 if s < len(rampValues[p]):
@@ -481,6 +490,7 @@ class MyForm(QtGui.QMainWindow):
                 else:
                     parameters[p] = rampValues[p][-1] # If no value is defined, use last defined value.
                 cellRefs[p].setText(str(parameters[p])) # Update GUI!
+                UIparamTable.update()
                 
             
             # All parameters are set, run PP experiments:
@@ -488,15 +498,18 @@ class MyForm(QtGui.QMainWindow):
             # UPLOAD AND RUN PP EXPERIMENT HERE
             print "Run PP Experiment"
             self.pp_run(parameters)
-            netCountAbove = self.netCountAbove()
+            netCountAbove = self.net_countabove()
             percentDark = 100 - netCountAbove
             listDark.append(percentDark)
-
-            self.xValues = parameters
-            self.yValues = listDark
             
+            self.xValues = xparam_vals[0:s+1]
+            self.yValues = listDark
+                        
             # Plot percent dark vs parameters
-            self.ui.DAQ_PWin.plot(self.xValues, self.yValues, pen=(0,255,0))            
+            DAQ_PWin_graph.plot(self.xValues, self.yValues, pen=(0,255,0), clear=True)            
+            
+            # Force repaint:
+            DAQ_PWin.update()
             
             # Check if stopped:
             if self.DAQ_STOP is True:
@@ -504,30 +517,6 @@ class MyForm(QtGui.QMainWindow):
                 return                
             
         self.DAQ_Running = False
-        
-    # This method opens up DAQ graph
-    def DAQreadout(self):
-        self.DAQ_PWin = pg.plot(title = "Fraction of Dark vs. Frequency", pen = 'r')
-        self.DAQ_PWin.setLabel('left', "Fraction of Dark", units='%')
-        self.DAQ_PWin.setLabel('bottom', "Frequency", units='s^-1')
-        self.DAQ_PWin.showGrid(x=False, y=True)
-
-        lr = pg.LinearRegionItem([400,700])
-        lr.setZValue(-10)
-        self.DAQ_PWin.addItem(lr)
-
-        zoomed = pg.plot(title="Zoom on selected region")
-        zoomed.setLabel('left', "Fraction of Dark", units='%')
-        zoomed.setLabel('bottom', "Frequency", units='s^-1')
-        zoomed.showGrid(x=False, y=True)
-        #zoomed.plot()
-        def updatePlot():
-            zoomed.setXRange(*lr.getRegion(), padding=0)
-        def updateRegion():
-            lr.setRegion(zoomed.getViewBox().viewRange()[0])
-        lr.sigRegionChanged.connect(updatePlot)
-        zoomed.sigXRangeChanged.connect(updateRegion)
-        updatePlot()
 
         
         

@@ -560,14 +560,6 @@ class Ui_Form(object):
         self.stopDAQButton.setGeometry(QtCore.QRect(681, 710, 210, 31))
         QtCore.QObject.connect(self.stopDAQButton, QtCore.SIGNAL("clicked()"), mainwindow.stopDAQPressed)
 
-        # Connect event handlers to functions:
-        QtCore.QObject.connect(self.openButton, QtCore.SIGNAL("clicked()"), mainwindow.openFile)
-        QtCore.QObject.connect(self.saveAsButton, QtCore.SIGNAL("clicked()"), mainwindow.saveAs)
-        QtCore.QObject.connect(self.runButton, QtCore.SIGNAL("clicked()"), mainwindow.pp_run)
-        QtCore.QObject.connect(self.stopButton, QtCore.SIGNAL("clicked()"), mainwindow.stop)
-        QtCore.QObject.connect(self.readoutButton, QtCore.SIGNAL("clicked()"), mainwindow.readout)
-        QtCore.QObject.connect(self.resetPlotButton, QtCore.SIGNAL("clicked()"), mainwindow.resetPlot)
-
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtGui.QApplication.translate("Form", "Form", None, QtGui.QApplication.UnicodeUTF8))
         self.openButton.setText(QtGui.QApplication.translate("Form", "Open", None, QtGui.QApplication.UnicodeUTF8))
