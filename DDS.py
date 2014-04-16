@@ -440,11 +440,11 @@ class MyForm(QtGui.QMainWindow):
         self.DAQreadout()
         
         # Execute on a background thread to not hold up GUI:
-        experiment_thread = threading.Thread(target=self.runDAQExperiment)
+        experiment_thread = threading.Thread(target=self.runDAQExperiment, args=[self.ui.parameterTable])
         experiment_thread.start()
         
     
-    def runDAQExperiment(self):
+    def runDAQExperiment(self, UIparamTable):
         # Interpret the ramp values:
         rampValues = self.interpretRampValues()
         
@@ -454,12 +454,14 @@ class MyForm(QtGui.QMainWindow):
         
         # Get current parameter values from interface:
         parameters = {}
+        cellRefs = {}
         self.DAQ_Params = parameters
         for x in range(0, self.ui.parameterTable.rowCount()):
-            param = self.ui.parameterTable.item(x, 0).text().toUtf8().data() # Convert to a normal string from QString
-            value = self.ui.parameterTable.item(x, 1).text().toFloat()[0] # Convert value from QString to float
+            param = UIparamTable.item(x, 0).text().toUtf8().data() # Convert to a normal string from QString
+            value = UIparamTable.item(x, 1).text().toFloat()[0] # Convert value from QString to float
             if len(param) != 0:
                 parameters[param] = value
+                cellRefs[param] = UIparamTable.item(x, 1)
         
         # Find the number of samples we will have to take:
         mostSamples = 0
@@ -478,6 +480,8 @@ class MyForm(QtGui.QMainWindow):
                     parameters[p] = rampValues[p][s] # Use the value for this parameter at this timestep
                 else:
                     parameters[p] = rampValues[p][-1] # If no value is defined, use last defined value.
+                cellRefs[p].setText(str(parameters[p])) # Update GUI!
+                
             
             # All parameters are set, run PP experiments:
             
