@@ -58,7 +58,6 @@ class MyForm(QtGui.QMainWindow):
                 print "DDS %i = Board %i, Channel %i" % (i+j, i, j)
                     
         # Initialize UI window
-        self.lock = threading.Lock()
         self.ui = Ui_Form()
         
         self.ui.setupUi(self)
@@ -84,6 +83,9 @@ class MyForm(QtGui.QMainWindow):
         
         # Initialize DAQ:
         self.DAQ_Running = False
+        self.lock = threading.Lock()
+        QtCore.QObject.connect(self, QtCore.SIGNAL("updateParamTable(int, PyQt_PyObject)"), self.updateParamTable)
+        QtCore.QObject.connect(self, QtCore.SIGNAL("updateDAQGraph(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"), self.updateDAQGraph)
     
     # Choose a new project directory to save all files from experiments:
     def chooseProjectDirectory(self):
@@ -435,29 +437,22 @@ class MyForm(QtGui.QMainWindow):
         self.DAQ_Running = True
         print "Starting DAQ run"
         self.DAQ_STOP = False
+        if self.lock.locked():
+            self.lock.release() # Release any held locks
         
-        # Execute on a background thread to not hold up GUI:
-        #experiment_thread = threading.Thread(target=self.runDAQExperiment, args=[self.ui.parameterTable])
-        #experiment_thread.start()
-        self.runDAQExperiment(self.ui.parameterTable)
-        
-    
-    def runDAQExperiment(self, UIparamTable):
         # Interpret the ramp values:
-        rampValues = self.interpretRampValues()
-        
-        if len(rampValues) == 0:
+        ramp_values = self.interpretramp_values()
+        if len(ramp_values) == 0:
             print "No values to ramp, aborting DAQ run!"
             return
         
-        # Find x-axis values:
+        # Find x-axis:
         xparam_name = self.ui.xAxisSetLabel.text().toUtf8().data()
-        print rampValues.keys()
+        print ramp_values.keys()
         print xparam_name
-        if xparam_name not in rampValues.keys():
+        if xparam_name not in ramp_values.keys():
             print "X parameter: '%s' not valid! Capitalization matters!" % xparam_name
             return False
-        xparam_vals = rampValues[xparam_name]
         
         # CREATE GRAPH:
         DAQ_PWin = pg.plot(title = "Percent Dark vs. %s"%xparam_name, pen = 'r') # Create new plot window
@@ -466,59 +461,91 @@ class MyForm(QtGui.QMainWindow):
         DAQ_PWin.showGrid(x=False, y=True)
         DAQ_PWin_graph = DAQ_PWin.getPlotItem()
         
+        # Execute on a background thread to not hold up GUI:
+        experiment_thread = threading.Thread(target=self.runDAQExperiment, args=(ramp_values, DAQ_PWin_graph, xparam_name))
+        experiment_thread.start()
+        
+    
+    def runDAQExperiment(self, ramp_values, daq_graph, xparam_name):
+        # Get x-axis values:
+        xparam_vals = ramp_values[xparam_name]
+        
+        self.lock.acquire()
         # Get current parameter values from interface:
         parameters = {}
-        cellRefs = {}
+        rowNums = {}
         self.DAQ_Params = parameters
         for x in range(0, self.ui.parameterTable.rowCount()):
-            param = UIparamTable.item(x, 0).text().toUtf8().data() # Convert to a normal string from QString
-            value = UIparamTable.item(x, 1).text().toFloat()[0] # Convert value from QString to float
+            param = self.ui.parameterTable.item(x, 0).text().toUtf8().data() # Convert to a normal string from QString
+            value = self.ui.parameterTable.item(x, 1).text().toFloat()[0] # Convert value from QString to float
             if len(param) != 0:
                 parameters[param] = value
-                cellRefs[param] = UIparamTable.item(x, 1)
+                rowNums[param] = x
+        self.lock.release()
+        print "Starting run of %i samples for %i parameter(s)" % (len(xparam_vals), len(ramp_values))
         
-        print "Starting run of %i samples for %i parameter(s)" % (len(xparam_vals), len(rampValues))
-
-        # Initializing list of percent dark values
         listDark = []
-        
         for s in range(0, len(xparam_vals)):
             # Modify parameters that were changed in the DAQ ramp code:
-            for p in rampValues:
-                if s < len(rampValues[p]):
-                    parameters[p] = rampValues[p][s] # Use the value for this parameter at this timestep
+            for p in ramp_values:
+                if s < len(ramp_values[p]):
+                    parameters[p] = ramp_values[p][s] # Use the value for this parameter at this timestep
                 else:
-                    parameters[p] = rampValues[p][-1] # If no value is defined, use last defined value.
-                cellRefs[p].setText(str(parameters[p])) # Update GUI!
-                UIparamTable.update()
-                
-            
+                    parameters[p] = ramp_values[p][-1] # If no value is defined, use last defined value.
+                self.lock.acquire()
+                try:
+                    # Update GUI:
+                    self.emit(QtCore.SIGNAL("updateParamTable(int, PyQt_PyObject)"), rowNums[p], str(parameters[p]))
+                finally:
+                    self.lock.release()
+    
             # All parameters are set, run PP experiments:
+            self.lock.acquire()
+            try:
+                print "Run PP Experiment"
+                self.pp_run(parameters)
+                netCountAbove = self.net_countabove()
+                percentDark = 100 - netCountAbove
+                listDark.append(percentDark)
+
+                # Plot data:
+                self.xValues = xparam_vals[0:s+1]
+                self.yValues = listDark
+                self.emit(QtCore.SIGNAL("updateDAQGraph(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"), daq_graph, xparam_vals[0:s+1], listDark[:])
+            except:
+                print "Error running PP experiment!"
+            finally:
+                self.lock.release()
             
-            # UPLOAD AND RUN PP EXPERIMENT HERE
-            print "Run PP Experiment"
-            self.pp_run(parameters)
-            netCountAbove = self.net_countabove()
-            percentDark = 100 - netCountAbove
-            listDark.append(percentDark)
+            time.sleep(1/60.0) # Let GUI Update
             
-            self.xValues = xparam_vals[0:s+1]
-            self.yValues = listDark
-                        
-            # Plot percent dark vs parameters
-            DAQ_PWin_graph.plot(self.xValues, self.yValues, pen=(0,255,0), clear=True)            
-            
-            # Force repaint:
-            DAQ_PWin.update()
-            
-            # Check if stopped:
+            #Check if stopped:
             if self.DAQ_STOP is True:
                 self.DAQ_Running = False
                 return                
             
+            
+            
         self.DAQ_Running = False
+            
 
-        
+    def updateParamTable(self, rowNum, val_str):
+        self.lock.acquire()
+        try:
+            self.ui.parameterTable.item(rowNum, 1).setText(val_str)
+            self.ui.parameterTable.update()
+        finally:
+            self.lock.release()
+        return
+    
+    def updateDAQGraph(self, DAQGraph, newxdata, newydata):
+        self.lock.acquire()
+        try:
+            DAQGraph.plot(newxdata, newydata, pen=(255,0,255), clear=True)            
+            DAQGraph.update()
+        finally:
+            self.lock.release()
+        return
         
     def stopDAQPressed(self):
         self.DAQ_STOP = True
@@ -545,7 +572,7 @@ class MyForm(QtGui.QMainWindow):
     
     # Create a matrix of the different parameters that are changing, and what their value
     # will be at each "PP-run" sample step.
-    def interpretRampValues(self):
+    def interpretramp_values(self):
         text = self.ui.rampSettingsBox.toPlainText().toUtf8().data()
         textlines = text.split("\n")
         usedParams = [] # Parameters that have been parsed so far.
@@ -641,8 +668,8 @@ class MyForm(QtGui.QMainWindow):
                 continue
             
             # Use for debugging:
-            #print param
-            #print actualVals
+            print param
+            print actualVals
             
             # Add a new entry in the parameters as a function of time, if necessary
             if param not in usedParams:
