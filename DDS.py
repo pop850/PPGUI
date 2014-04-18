@@ -5,6 +5,7 @@
 
 import sys
 import os
+import datetime
 
 # Packages used: PyQt, PyQtGraph, Scipy
 
@@ -62,6 +63,9 @@ class MyForm(QtGui.QMainWindow):
         
         self.ui.setupUi(self)
         self.setWindowTitle(self._DDS_name + " Pulse Programmer & DAQ")
+
+        # Variable to count the number of runs so far
+        self.runNum = 0
         
         # Update limits for the input FREQ, AMP, PHASE boxes
         for i in range(len(self.boardChannelIndex)):
@@ -77,9 +81,9 @@ class MyForm(QtGui.QMainWindow):
         self.plotdata = numpy.zeros([100,3], 'Float32')
         self.ui.histogram_dataitem = None
 
-        # Initialize DAQ graph with zero values
-        self.DAQdata = numpy.zeros([100,3], 'Int32')
-        self.DAQplotdata = numpy.zeros([100,3], 'Float32')
+##        # Initialize DAQ graph with zero values
+##        self.DAQdata = numpy.zeros([100,3], 'Int32')
+##        self.DAQplotdata = numpy.zeros([100,3], 'Float32')
         
         # Initialize DAQ:
         self.DAQ_Running = False
@@ -522,13 +526,17 @@ class MyForm(QtGui.QMainWindow):
             #Check if stopped:
             if self.DAQ_STOP is True:
                 self.DAQ_Running = False
+                # Automatically saves DAQ data/graph file if run is STOPPED
+                self.DAQsaveAs(daq_graph)
+
                 return                
             
             
-            
+        # Done.
         self.DAQ_Running = False
-            
+        self.DAQsaveAs(daq_graph)
 
+    
     def updateParamTable(self, rowNum, val_str):
         self.lock.acquire()
         try:
@@ -546,29 +554,40 @@ class MyForm(QtGui.QMainWindow):
         finally:
             self.lock.release()
         return
-        
+    
+    
     def stopDAQPressed(self):
         self.DAQ_STOP = True
         self.DAQ_Running = False
         print "DAQ Stopped"
 
 
-     # This method saves the DAQ graph to a selected data file
+    # This method saves the DAQ Graph to a file in the cwd
+    # using the date, time, and run number
+    def DAQsaveAs(self, plotItem):
+        self.runNum += 1
+        
+        print("Saving DAQ graph and data...")
+        
+        dateString = datetime.datetime.now().strftime("%m-%d-%y-%a-%I %M%p-")
+        fDataName = dateString + "Run " + str(self.runNum) + ".txt"
+        
+        try:
+            fd = open(fDataName, 'w')
+            print("Entering for loop:")
+            for i in range(len(self.xValues)):
+                print("Going through data: " + str(i))
+                fd.write('%d, %d\n'%(self.xValues[i], self.yValues[i]))
+            fd.close
+        except Exception, E:
+            print E
 
-##    def DAQsaveAs(self):
-##        data = self.data
-##        fname = QtGui.QFileDialog.getSaveFileName(self, 'Save Data File', 
-##                os.getcwd())
-##        
-##        try:
-##            fd = open(fname, 'w')
-##            for i in range(len(data)):
-##                fd.write(What "data" goes in here?)
-##            fd.close
-##        except Exception, E:
-##            print E
-##        
-##        return True
+        fGraphName = dateString + "Graph " + str(self.runNum) + ".jpg"
+        exporter = pg.exporters.ImageExporter.ImageExporter(plotItem)
+        exporter.parameters()['width'] = 500
+        exporter.export(fGraphName)
+        
+        return True
     
     # Create a matrix of the different parameters that are changing, and what their value
     # will be at each "PP-run" sample step.
