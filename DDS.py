@@ -573,11 +573,12 @@ class MyForm(QtGui.QMainWindow):
         fDataName = dateString + "Run " + str(self.runNum) + ".txt"
         
         try:
+            os.chdir(self.projectSavePath)
             fd = open(fDataName, 'w')
             print("Entering for loop:")
             for i in range(len(self.xValues)):
                 print("Going through data: " + str(i))
-                fd.write('%d, %d\n'%(self.xValues[i], self.yValues[i]))
+                fd.write('%f, %f\n'%(self.xValues[i], self.yValues[i]))
             fd.close
         except Exception, E:
             print E
