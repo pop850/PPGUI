@@ -80,10 +80,6 @@ class MyForm(QtGui.QMainWindow):
         self.data = numpy.zeros([100,3], 'Int32')
         self.plotdata = numpy.zeros([100,3], 'Float32')
         self.ui.histogram_dataitem = None
-
-##        # Initialize DAQ graph with zero values
-##        self.DAQdata = numpy.zeros([100,3], 'Int32')
-##        self.DAQplotdata = numpy.zeros([100,3], 'Float32')
         
         # Initialize DAQ:
         self.DAQ_Running = False
@@ -571,7 +567,7 @@ class MyForm(QtGui.QMainWindow):
         dateString = datetime.datetime.now().strftime("%m-%d-%y-%a-%I %M%p-")
         fileString = datetime.datetime.now().strftime("%m-%d-%y-%a")
 
-        dirPath = os.path.join(os.getcwd(), fileString)
+        dirPath = os.path.join(self.projectSavePath, fileString)
         fDataName = dateString + "Run " + str(self.runNum) + ".txt"
 
         if not os.path.exists(dirPath):
