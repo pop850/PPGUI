@@ -521,14 +521,13 @@ class MyForm(QtGui.QMainWindow):
             finally:
                 self.lock.release()
             
-            time.sleep(1/60.0) # Let GUI Update
+            time.sleep(1/20.0) # Let GUI Update
             
             #Check if stopped:
             if self.DAQ_STOP is True:
                 self.DAQ_Running = False
                 # Automatically saves DAQ data/graph file if run is STOPPED
                 self.DAQsaveAs(daq_graph)
-
                 return                
             
             
@@ -570,14 +569,18 @@ class MyForm(QtGui.QMainWindow):
         print("Saving DAQ graph and data...")
         
         dateString = datetime.datetime.now().strftime("%m-%d-%y-%a-%I %M%p-")
+        fileString = datetime.datetime.now().strftime("%m-%d-%y-%a")
+
+        dirPath = os.path.join(os.getcwd(), fileString)
         fDataName = dateString + "Run " + str(self.runNum) + ".txt"
-        
+
+        if not os.path.exists(dirPath):
+            os.makedirs(dirPath)        
+            
         try:
-            fd = open(fDataName, 'w')
-            print("Entering for loop:")
+            fd = open(os.path.join(dirPath, fDataName), "wb")
             for i in range(len(self.xValues)):
-                print("Going through data: " + str(i))
-                fd.write('%d, %d\n'%(self.xValues[i], self.yValues[i]))
+                fd.write('%f, %f\n'%(self.xValues[i], self.yValues[i]))
             fd.close
         except Exception, E:
             print E
@@ -585,7 +588,7 @@ class MyForm(QtGui.QMainWindow):
         fGraphName = dateString + "Graph " + str(self.runNum) + ".jpg"
         exporter = pg.exporters.ImageExporter.ImageExporter(plotItem)
         exporter.parameters()['width'] = 500
-        exporter.export(fGraphName)
+        exporter.export(os.path.join(dirPath, fGraphName))
         
         return True
     
