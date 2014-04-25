@@ -461,13 +461,14 @@ class MyForm(QtGui.QMainWindow):
         if self.ui.plotAverageCheckbox.isChecked():
             yaxislabel = "Average Counts"
         if self.ui.plotAverageCheckbox.isChecked() and self.ui.plotPercentDarkCheckbox.isChecked():
-            yaxislabel = "% Dark, Average Counts"
+            yaxislabel = "% Dark (Green), Average Counts (Pink)"
         
-        DAQ_PWin = pg.plot(title = "Percent Dark vs. %s"%xparam_name, pen = 'r') # Create new plot window
+        DAQ_PWin = pg.plot(title = yaxislabel + " vs. " + xparam_name, pen = 'r') # Create new plot window
         DAQ_PWin.setLabel('left', yaxislabel)
         DAQ_PWin.setLabel('bottom', xparam_name)
         DAQ_PWin.showGrid(x=False, y=True)
         DAQ_PWin_graph = DAQ_PWin.getPlotItem()
+
         
         # Execute on a background thread to not hold up GUI:
         experiment_thread = threading.Thread(target=self.runDAQExperiment, args=(ramp_values, DAQ_PWin_graph, xparam_name))
@@ -572,6 +573,7 @@ class MyForm(QtGui.QMainWindow):
             DAQGraph.clear()
             if useDark == 1:
                 DAQGraph.plot(newxdata, newDarkData, pen=(255,0,255), clear=False)
+                
             if useAvg == 1:
                 DAQGraph.plot(newxdata, newAvgData, pen=(0,255,0), clear=False)
             DAQGraph.update()
