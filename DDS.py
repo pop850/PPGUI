@@ -85,7 +85,7 @@ class MyForm(QtGui.QMainWindow):
         self.DAQ_Running = False
         self.lock = threading.Lock()
         QtCore.QObject.connect(self, QtCore.SIGNAL("updateParamTable(int, PyQt_PyObject)"), self.updateParamTable)
-        QtCore.QObject.connect(self, QtCore.SIGNAL("updateDAQGraph(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"), self.updateDAQGraph)
+        QtCore.QObject.connect(self, QtCore.SIGNAL("updateDAQGraph(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, int, PyQt_PyObject, int)"), self.updateDAQGraph)
     
     # Choose a new project directory to save all files from experiments:
     def chooseProjectDirectory(self):
@@ -403,9 +403,9 @@ class MyForm(QtGui.QMainWindow):
                 tot = tot + self.data[addr][1]
         
         if (count < 5):
-            return "RESULT: 0\n"
+            return 0
         else:
-            return "RESULT: %f\n"%(1.0*tot/count)
+            return (1.0*tot/count)
     
     def net_countabove(self):
         self.readout()
@@ -455,8 +455,16 @@ class MyForm(QtGui.QMainWindow):
             return False
         
         # CREATE GRAPH:
+        yaxislabel = ""
+        if self.ui.plotPercentDarkCheckbox.isChecked():
+            yaxislabel = "% Dark"
+        if self.ui.plotAverageCheckbox.isChecked():
+            yaxislabel = "Average Counts"
+        if self.ui.plotAverageCheckbox.isChecked() and self.ui.plotPercentDarkCheckbox.isChecked():
+            yaxislabel = "% Dark, Average Counts"
+        
         DAQ_PWin = pg.plot(title = "Percent Dark vs. %s"%xparam_name, pen = 'r') # Create new plot window
-        DAQ_PWin.setLabel('left', "Percent Dark", units='%')
+        DAQ_PWin.setLabel('left', yaxislabel)
         DAQ_PWin.setLabel('bottom', xparam_name)
         DAQ_PWin.showGrid(x=False, y=True)
         DAQ_PWin_graph = DAQ_PWin.getPlotItem()
@@ -485,6 +493,20 @@ class MyForm(QtGui.QMainWindow):
         print "Starting run of %i samples for %i parameter(s)" % (len(xparam_vals), len(ramp_values))
         
         listDark = []
+        self.data_darkValues = listDark
+        listAvg = []
+        self.data_avgValues = listAvg
+        
+        useDark = 0
+        useAvg = 0
+        
+        if self.ui.plotPercentDarkCheckbox.isChecked():
+            useDark = 1
+        if self.ui.plotAverageCheckbox.isChecked():
+            useAvg = 1
+        
+        
+        
         for s in range(0, len(xparam_vals)):
             # Modify parameters that were changed in the DAQ ramp code:
             for p in ramp_values:
@@ -506,12 +528,15 @@ class MyForm(QtGui.QMainWindow):
                 self.pp_run(parameters)
                 netCountAbove = self.net_countabove()
                 percentDark = 100 - netCountAbove
-                listDark.append(percentDark)
-
-                # Plot data:
+                listDark.append(percentDark) # % Dark
+                
+                listAvg.append(self.net_lastavg()) # Average
+                
                 self.xValues = xparam_vals[0:s+1]
-                self.data_darkValues = listDark
-                self.emit(QtCore.SIGNAL("updateDAQGraph(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"), daq_graph, xparam_vals[0:s+1], listDark[:])
+                
+                # Plot % dark and/or avg
+                self.emit(QtCore.SIGNAL("updateDAQGraph(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject, int, PyQt_PyObject, int)"), daq_graph, xparam_vals[0:s+1], listDark[:], useDark, listAvg[:], useAvg)
+                
             except:
                 print "Error running PP experiment!"
             finally:
@@ -541,10 +566,14 @@ class MyForm(QtGui.QMainWindow):
             self.lock.release()
         return
     
-    def updateDAQGraph(self, DAQGraph, newxdata, newydata):
+    def updateDAQGraph(self, DAQGraph, newxdata, newDarkData, useDark, newAvgData, useAvg):
         self.lock.acquire()
         try:
-            DAQGraph.plot(newxdata, newydata, pen=(255,0,255), clear=True)            
+            DAQGraph.clear()
+            if useDark == 1:
+                DAQGraph.plot(newxdata, newDarkData, pen=(255,0,255), clear=False)
+            if useAvg == 1:
+                DAQGraph.plot(newxdata, newAvgData, pen=(0,255,0), clear=False)
             DAQGraph.update()
         finally:
             self.lock.release()
