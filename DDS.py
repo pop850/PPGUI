@@ -510,7 +510,7 @@ class MyForm(QtGui.QMainWindow):
 
                 # Plot data:
                 self.xValues = xparam_vals[0:s+1]
-                self.yValues = listDark
+                self.data_darkValues = listDark
                 self.emit(QtCore.SIGNAL("updateDAQGraph(PyQt_PyObject, PyQt_PyObject, PyQt_PyObject)"), daq_graph, xparam_vals[0:s+1], listDark[:])
             except:
                 print "Error running PP experiment!"
@@ -572,14 +572,34 @@ class MyForm(QtGui.QMainWindow):
 
         if not os.path.exists(dirPath):
             os.makedirs(dirPath)        
-            
-        try:
-            fd = open(os.path.join(dirPath, fDataName), "wb")
-            for i in range(len(self.xValues)):
-                fd.write('%f, %f\n'%(self.xValues[i], self.yValues[i]))
-            fd.close
-        except Exception, E:
-            print E
+
+        if self.ui.plotPercentDarkCheckbox.isChecked() and self.ui.plotAverageCheckbox.isChecked():
+            try:
+                fd = open(os.path.join(dirPath, fDataName), "wb")
+                fd.write("Frequency\tDark Values\tAverage Values\n")
+                for i in range(len(self.xValues)):
+                    fd.write('%f\t%f\t%f\n'%(self.xValues[i], self.data_darkValues[i], self.data_avgValues[i]))
+                fd.close
+            except Exception, E:
+                print E
+        elif self.ui.plotPercentDarkCheckbox.isChecked():
+            try:
+                fd = open(os.path.join(dirPath, fDataName), "wb")
+                fd.write("Frequency\tDark Values\n")
+                for i in range(len(self.xValues)):
+                    fd.write('%f\t%f\n'%(self.xValues[i], self.data_darkValues[i]))
+                fd.close
+            except Exception, E:
+                print E
+        elif self.ui.plotAverageCheckbox.isChecked():
+            try:
+                fd = open(os.path.join(dirPath, fDataName), "wb")
+                fd.write("Frequency\tAverage Values\n")
+                for i in range(len(self.xValues)):
+                    fd.write('%f\t%f\n'%(self.xValues[i], self.data_avgValues[i]))
+                fd.close
+            except Exception, E:
+                print E
 
         fGraphName = dateString + "Graph " + str(self.runNum) + ".jpg"
         exporter = pg.exporters.ImageExporter.ImageExporter(plotItem)
