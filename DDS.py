@@ -732,8 +732,8 @@ class MyForm(QtGui.QMainWindow):
                     print "Error %s parsing line:\n%s\n" % (e, line)
                     continue
             # Ensure we are adding the right length:
-            if len(actualVals) != currentSyncLength:
-                print "Number of steps in SYNC-block (%i) not equal to steps in line:\n%s\n" % (currentSyncLength, line)
+            if len(actualVals) > currentSyncLength:
+                print "Number of steps in SYNC-block (%i) not big enough to hold steps in line:\n%s\n" % (currentSyncLength, line)
                 continue
             
             # Use for debugging:
