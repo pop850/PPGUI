@@ -18,7 +18,7 @@ except AttributeError:
 class Ui_Form(object):
     def setupUi(self, mainwindow):
         mainwindow.resize(900, 770) # Set default size of window, but it is resizable.
-        mainwindow.setMaximumSize(QtCore.QSize(900, 770))
+        mainwindow.setMaximumSize(QtCore.QSize(930, 800))
         # Create the scroll area: 
         self.scrollArea = QtGui.QScrollArea(mainwindow)
         mainwindow.setCentralWidget(self.scrollArea) # Set central widget so it expands to fill mainwindow.
@@ -545,19 +545,19 @@ class Ui_Form(object):
         self.openDDSCommandFileButton = QtGui.QPushButton("File...", Form)
         self.openDDSCommandFileButton.setGeometry(QtCore.QRect(820, 145, 71, 31))
         QtCore.QObject.connect(self.openDDSCommandFileButton, QtCore.SIGNAL("clicked()"), mainwindow.chooseDDSFrequencyFile)
-        self.rampSettingsBox = QtGui.QTextEdit("# Specify parameters like this<br /># for synchronous execution for<br /># each STEP in order:<br /># SYNC:[NUM STEPS]<br /># [PARAM] = R1 R2 ... Rn<br /># Ri=[NUM STEPS]:[START]:[END] OR [START]:[END] OR [NUM]<br /># ENDSYNC", Form)
+        self.rampSettingsBox = QtGui.QTextEdit("# Specify parameters like this<br /># for synchronous execution for<br /># each STEP in order:<br /># SYNC:NUM STEPS<br /># PARAM = R1 R2 ... Rn<br /># Ri=NUM STEPS:START:END OR START:END OR NUM<br /># ENDSYNC", Form)
         self.rampSettingsBox.setWordWrapMode(QtGui.QTextOption.NoWrap)
         self.rampSettingsBox.setStyleSheet("font-size:11pt; font-family:Courier, Courier New")
-        self.rampSettingsBox.setGeometry(QtCore.QRect(675, 170, 222, 400))
+        self.rampSettingsBox.setGeometry(QtCore.QRect(675, 170, 222, 500))
         
         self.memoryLabel = QtGui.QLabel("PP Memory: -", Form)
-        self.memoryLabel.setGeometry(QtCore.QRect(680, 605, 150, 15))
+        self.memoryLabel.setGeometry(QtCore.QRect(680, 685, 150, 15))
         
         self.startDAQButton = QtGui.QPushButton("Go", Form)
-        self.startDAQButton.setGeometry(QtCore.QRect(681, 685, 210, 31))
+        self.startDAQButton.setGeometry(QtCore.QRect(681, 705, 210, 31))
         QtCore.QObject.connect(self.startDAQButton, QtCore.SIGNAL("clicked()"), mainwindow.startDAQPressed)
         self.stopDAQButton = QtGui.QPushButton("Stop", Form)
-        self.stopDAQButton.setGeometry(QtCore.QRect(681, 710, 210, 31))
+        self.stopDAQButton.setGeometry(QtCore.QRect(681, 730, 210, 31))
         QtCore.QObject.connect(self.stopDAQButton, QtCore.SIGNAL("clicked()"), mainwindow.stopDAQPressed)
 
     def retranslateUi(self, Form):

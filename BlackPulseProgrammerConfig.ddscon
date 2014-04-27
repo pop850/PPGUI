@@ -19,7 +19,7 @@
 	<key>A_RedOn</key>
 	<string>0</string>
 	<key>A_SCool</key>
-	<string>35.2261306533</string>
+	<string>1.0</string>
 	<key>F_BlueCool</key>
 	<string>0</string>
 	<key>F_BlueDetect</key>
@@ -39,7 +39,7 @@
 	<key>F_RedOn</key>
 	<string>67</string>
 	<key>F_Sec</key>
-	<string>20.0</string>
+	<string>1.0</string>
 	<key>F_Sec2</key>
 	<string>0</string>
 	<key>Grahame</key>

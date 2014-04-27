@@ -39,6 +39,7 @@ class MyForm(QtGui.QMainWindow):
         self._boards = ('ad9910', 'ad9959')
         self._FPGA_bitFile = 'DDSfirmware.bit'  # Place bitfile in ./FPGA
         self._checkOutputs = False
+        self.codefile = None
         
         # Initialize FPGA
         self.xem = ok.FrontPanel()
@@ -237,6 +238,9 @@ class MyForm(QtGui.QMainWindow):
                 parameters.update({param : value})
         if overrideParams is not None:
             parameters = overrideParams # If parameters are set for override.
+        if self.codefile is None:
+            print "No PP code file found!"
+            return False
         
         code = pp2bytecode(self.codefile, self.boardChannelIndex, self.boards, parameters)
         
@@ -383,11 +387,11 @@ class MyForm(QtGui.QMainWindow):
     def net_memory(self):
         self.readout()
 
-        memory = 'RESULT:'
+        memory = ""
         for addr in range(100):
             memory = memory + " %i"%(self.data[addr][1])
 
-        return memory + "\n"
+        return memory
     
     def net_lastavg(self):
         count = 0
@@ -439,6 +443,11 @@ class MyForm(QtGui.QMainWindow):
         self.DAQ_STOP = False
         if self.lock.locked():
             self.lock.release() # Release any held locks
+        
+        # Check a PP Codefile is specified:
+        if self.codefile is None:
+            print "No PP code file found!"
+            return False
         
         # Interpret the ramp values:
         ramp_values = self.interpretramp_values()
@@ -505,8 +514,6 @@ class MyForm(QtGui.QMainWindow):
             useDark = 1
         if self.ui.plotAverageCheckbox.isChecked():
             useAvg = 1
-        
-        
         
         for s in range(0, len(xparam_vals)):
             # Modify parameters that were changed in the DAQ ramp code:
@@ -672,11 +679,12 @@ class MyForm(QtGui.QMainWindow):
                     except:
                         e = sys.exc_info()[0]
                         print "Error %s interpreting SYNC steps, skipping: %s" % (e, line)
+                        return []
                     continue
             if validLine.strip() == "ENDSYNC":
                 if sync is False:
                     print "Error: SYNC is already off!: %s" % line
-                    continue
+                    return []
                 sync = False # Turn off sync
                 startSyncTime = startSyncTime + currentSyncLength # Increment by length of last block
                 continue
@@ -685,7 +693,7 @@ class MyForm(QtGui.QMainWindow):
             ops = validLine.split("=")
             if len(ops) != 2:
                 print "Error parsing line, incorrect use of '=':\n%s\n" % line
-                continue
+                return []
             
             param = ops[0].split()[0] # The parameter to vary
             vals = ops[1].split()  # What values to set parameter to
@@ -699,12 +707,12 @@ class MyForm(QtGui.QMainWindow):
                     break
             if validParam == False:
                 print "Parameter '%s' not found in line:\n%s\n" % (param, line)
-                continue
+                return []
             
             # Ensure that we are in a SYNC block, since we are assigning values:
             if sync is not True:
                 print "Line is not in a SYNC block, skipping!:\n%s\n" % line
-                continue
+                return []
             
             # Now that param is validated, attempt to find its values:
             actualVals = []
@@ -725,16 +733,16 @@ class MyForm(QtGui.QMainWindow):
                             v = numpy.linspace(float(srg[1].strip()), float(srg[2].strip()), num=float(srg[0].strip())).tolist()
                     else:
                         print "Error evaluating '%s' in line:\n%s\n" % (rg, line)
-                        continue
+                        return []
                     actualVals.extend(v)
                 except:
                     e = sys.exc_info()[0]
                     print "Error %s parsing line:\n%s\n" % (e, line)
-                    continue
+                    return []
             # Ensure we are adding the right length:
-            if len(actualVals) > currentSyncLength:
-                print "Number of steps in SYNC-block (%i) not big enough to hold steps in line:\n%s\n" % (currentSyncLength, line)
-                continue
+            if len(actualVals) != currentSyncLength:
+                print "Number of steps in SYNC-block (%i) not equal to number of values in line:\n%s\n" % (currentSyncLength, line)
+                return []
             
             # Use for debugging:
             print param
